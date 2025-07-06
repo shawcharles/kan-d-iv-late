@@ -1,0 +1,23 @@
+name: kan-d-iv-late
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - pytorch>=2.0.0
+  - torchvision
+  - pytorch-cuda=11.8
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - pyyaml
+  - tqdm
+  - statsmodels
+  - jupyterlab
+  - git
+  - pip
+  - pip:
+    - git+https://github.com/Blealtan/efficient-kan.git
