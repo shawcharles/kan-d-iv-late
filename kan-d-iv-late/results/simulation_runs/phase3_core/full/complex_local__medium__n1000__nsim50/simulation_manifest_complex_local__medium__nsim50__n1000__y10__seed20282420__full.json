@@ -1,0 +1,59 @@
+{
+  "design_name": "complex_local",
+  "instrument_strength": "medium",
+  "k_folds": 3,
+  "kan_config": {
+    "grid_size": 4,
+    "hidden_dim": 16,
+    "lr": 0.001,
+    "min_class_count": 5,
+    "probability_epsilon": 1e-06,
+    "reg_strength": 0.0001,
+    "spline_order": 3,
+    "steps": 25,
+    "weight_decay": 0.0001
+  },
+  "kan_config_id": "kan_core_v1",
+  "kan_grid_size": 4,
+  "kan_hidden_dim": 16,
+  "kan_lr": 0.001,
+  "kan_min_class_count": 5,
+  "kan_reg_strength": 0.0001,
+  "kan_spline_order": 3,
+  "kan_steps": 25,
+  "kan_weight_decay": 0.0001,
+  "n_samples": 1000,
+  "n_simulations": 50,
+  "output_files": {
+    "compatibility_summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_results.csv",
+    "diagnostics": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_diagnostics_complex_local__medium__nsim50__n1000__y10__seed20282420__full.csv",
+    "diagnostics_summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_diagnostics_summary_complex_local__medium__nsim50__n1000__y10__seed20282420__full.csv",
+    "manifest": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_manifest_complex_local__medium__nsim50__n1000__y10__seed20282420__full.json",
+    "replications": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_replications_complex_local__medium__nsim50__n1000__y10__seed20282420__full.csv",
+    "scenario_summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_diagnostics_summary_complex_local__medium__nsim50__n1000__y10__seed20282420__full.csv",
+    "summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_summary_complex_local__medium__nsim50__n1000__y10__seed20282420__full.csv",
+    "truth": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/full/complex_local__medium__n1000__nsim50/simulation_truth_complex_local__medium__nsim50__n1000__y10__seed20282420__full.csv"
+  },
+  "probability_epsilon": 1e-06,
+  "profile_name": "full",
+  "rf_config": {
+    "min_samples_leaf": 1,
+    "n_estimators": 100,
+    "random_state": 42
+  },
+  "rf_config_id": "rf_core_v1",
+  "run_label": "complex_local__medium__nsim50__n1000__y10__seed20282420__full",
+  "scenario_label": "complex_local__medium__n1000__nsim50",
+  "seed_base": 20282420,
+  "truth_meta": {
+    "design_name": "complex_local",
+    "instrument_strength": "medium",
+    "true_complier_share": 0.47668,
+    "true_first_stage": 0.47668,
+    "truth_sample_size": 50000,
+    "truth_seed": 1729
+  },
+  "truth_sample_size": 50000,
+  "truth_seed": 1729,
+  "y_points": 10
+}

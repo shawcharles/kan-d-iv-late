@@ -1,0 +1,50 @@
+{
+  "design_name": "baseline",
+  "instrument_strength": "strong",
+  "k_folds": 3,
+  "kan_config": {
+    "grid_size": 4,
+    "hidden_dim": 16,
+    "lr": 0.001,
+    "min_class_count": 5,
+    "probability_epsilon": 1e-06,
+    "reg_strength": 0.0001,
+    "spline_order": 3,
+    "steps": 25,
+    "weight_decay": 0.0001
+  },
+  "kan_config_id": "kan_core_v1",
+  "kan_steps": 25,
+  "n_samples": 2000,
+  "n_simulations": 10,
+  "output_files": {
+    "compatibility_summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_results.csv",
+    "diagnostics": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_diagnostics_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.csv",
+    "diagnostics_summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_diagnostics_summary_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.csv",
+    "manifest": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_manifest_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.json",
+    "replications": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_replications_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.csv",
+    "scenario_summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_diagnostics_summary_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.csv",
+    "summary": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_summary_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.csv",
+    "truth": "/home/user/Documents/GITHUB/shawcharles/kan-d-iv-late/kan-d-iv-late/results/simulation_runs/phase3_core/pilot/baseline__strong__n2000__nsim10/simulation_truth_baseline__strong__nsim10__n2000__y8__seed20267420__pilot.csv"
+  },
+  "profile_name": "pilot",
+  "rf_config": {
+    "n_estimators": 100,
+    "random_state": 42
+  },
+  "rf_config_id": "rf_core_v1",
+  "run_label": "baseline__strong__nsim10__n2000__y8__seed20267420__pilot",
+  "scenario_label": "baseline__strong__n2000__nsim10",
+  "seed_base": 20267420,
+  "truth_meta": {
+    "design_name": "baseline",
+    "instrument_strength": "strong",
+    "true_complier_share": 0.8146,
+    "true_first_stage": 0.8146,
+    "truth_sample_size": 30000,
+    "truth_seed": 1729
+  },
+  "truth_sample_size": 30000,
+  "truth_seed": 1729,
+  "y_points": 8
+}

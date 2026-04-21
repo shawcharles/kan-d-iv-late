@@ -1,249 +1,502 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
-import matplotlib.pyplot as plt
-import os
-import torch
-from kan import KAN
 
-# --- 1. Load and Prepare Data ---
-def load_and_prepare_data(csv_path='KAN-D-IV-LATE/data/pension.csv'):
-    """
-    Loads the pension dataset, selects relevant columns, and performs basic preprocessing.
-    """
-    if not os.path.exists(csv_path):
+from dlate_score import compute_dlate_score_objects as compute_dlate_score_objects_common
+from kan_utils import (
+    build_kan_config,
+    build_kan_config_id,
+    build_rf_config,
+    build_rf_config_id,
+    clip_probabilities,
+    fit_binary_kan_predict,
+    fit_binary_rf_predict,
+)
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_DIR = SCRIPT_DIR.parent
+DEFAULT_DATA_PATH = PROJECT_DIR / "data" / "pension.csv"
+DEFAULT_RESULTS_DIR = PROJECT_DIR / "results"
+
+EMPIRICAL_K_FOLDS = 5
+EMPIRICAL_KAN_STEPS = 100
+PROBABILITY_EPSILON = 1e-5
+
+
+def load_and_prepare_data(csv_path=DEFAULT_DATA_PATH):
+    """Load the pension dataset and return the active variables."""
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
         print(f"Error: Data file not found at {csv_path}")
         return pd.DataFrame(), []
 
     df = pd.read_csv(csv_path)
-    
-    # Define variables based on the dataset description and plan
-    Y_col = 'net_tfa'  # Net financial assets (outcome)
-    W_col = 'p401'     # Participation in 401(k) (treatment)
-    Z_col = 'e401'     # Eligibility for 401(k) (instrument)
-    
-    # Covariates (as planned)
-    X_cols_original = ['inc', 'age', 'educ', 'marr', 'fsize', 'twoearn', 'db', 'pira', 'hown']
-    
-    required_cols = [Y_col, W_col, Z_col] + X_cols_original
-    
-    # Check if all required columns exist
+
+    y_col = "net_tfa"
+    w_col = "p401"
+    z_col = "e401"
+    x_cols = ["inc", "age", "educ", "marr", "fsize", "twoearn", "db", "pira", "hown"]
+
+    required_cols = [y_col, w_col, z_col] + x_cols
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         print(f"Error: Missing required columns in the dataset: {missing_cols}")
         return pd.DataFrame(), []
 
     df_subset = df[required_cols].copy()
-    
-    # Basic preprocessing: Handle missing values
-    df_subset.dropna(inplace=True) # Simple NaN handling for this example
-    
-    if len(df_subset) == 0:
+    df_subset.dropna(inplace=True)
+
+    if df_subset.empty:
         print("Error: No data remaining after dropping NaNs.")
         return pd.DataFrame(), []
 
-    # Rename columns for consistency if desired, or use original names
-    # For this script, we'll use Y, W, Z and keep original X column names
-    df_subset.rename(columns={
-        Y_col: 'Y',
-        W_col: 'W',
-        Z_col: 'Z'
-    }, inplace=True)
-        
-    return df_subset, X_cols_original
+    df_subset.rename(columns={y_col: "Y", w_col: "W", z_col: "Z"}, inplace=True)
+    return df_subset, x_cols
 
-# --- 2. Nuisance Function Estimators ---
-def estimate_nuisance_functions_empirical(data, X_cols, y_grid, k_folds=5):
+
+def is_binary_column(series):
+    values = set(pd.Series(series).dropna().unique().tolist())
+    return values.issubset({0, 1})
+
+
+def preprocess_empirical_data(data, x_cols, *, preprocess_mode="raw"):
+    """Apply a simple, transparent preprocessing policy to covariates."""
+    processed = data.copy()
+    standardized_columns = []
+
+    if preprocess_mode == "raw":
+        return processed, {"preprocess_mode": preprocess_mode, "standardized_columns": standardized_columns}
+    if preprocess_mode != "standardized":
+        raise ValueError(f"Unsupported preprocess_mode: {preprocess_mode}")
+
+    for column in x_cols:
+        if is_binary_column(processed[column]):
+            continue
+        std = float(processed[column].std(ddof=0))
+        if std <= 0:
+            continue
+        mean = float(processed[column].mean())
+        processed[column] = (processed[column] - mean) / std
+        standardized_columns.append(column)
+
+    return processed, {"preprocess_mode": preprocess_mode, "standardized_columns": standardized_columns}
+
+
+def build_empirical_y_grid(data, *, y_grid_points=30, quantile_bounds=(0.01, 0.99)):
+    """Build the outcome grid used by the empirical D-IV-LATE curve."""
+    lower_q, upper_q = quantile_bounds
+    min_y = float(np.quantile(data["Y"], lower_q))
+    max_y = float(np.quantile(data["Y"], upper_q))
+    if min_y >= max_y:
+        min_y = float(data["Y"].min())
+        max_y = float(data["Y"].max())
+    if min_y >= max_y:
+        raise ValueError("Outcome variable has insufficient variation for a valid y grid.")
+    return np.linspace(min_y, max_y, y_grid_points)
+
+
+def estimate_instrument_propensity_empirical(
+    data,
+    x_cols,
+    *,
+    model_type="rf",
+    k_folds=EMPIRICAL_K_FOLDS,
+    kan_steps=EMPIRICAL_KAN_STEPS,
+    kan_config=None,
+    rf_config=None,
+):
+    """Estimate out-of-fold instrument propensity scores only."""
+    kf = KFold(n_splits=k_folds, shuffle=True, random_state=42)
+    kan_config = dict(kan_config or {})
+    kan_config.setdefault("steps", kan_steps)
+    kan_config = build_kan_config(**kan_config)
+    rf_config = build_rf_config(**(rf_config or {}))
+
+    pi_hat_oos = np.zeros(len(data))
+    for train_index, test_index in kf.split(data):
+        data_train = data.iloc[train_index]
+        data_test = data.iloc[test_index]
+        pi_hat_oos[test_index] = _predict_binary(
+            model_type,
+            data_train[x_cols].to_numpy(),
+            data_train["Z"].to_numpy(),
+            data_test[x_cols].to_numpy(),
+            kan_config=kan_config,
+            rf_config=rf_config,
+            clip=True,
+        )
+    return clip_probabilities(pi_hat_oos, epsilon=PROBABILITY_EPSILON)
+
+
+def _predict_binary(
+    model_type,
+    train_features,
+    train_labels,
+    test_features,
+    *,
+    kan_config,
+    rf_config,
+    clip=False,
+):
+    if model_type == "kan":
+        kan_predict_kwargs = dict(kan_config)
+        kan_predict_kwargs["epsilon"] = kan_predict_kwargs.pop("probability_epsilon")
+        return fit_binary_kan_predict(
+            train_features,
+            train_labels,
+            test_features,
+            **kan_predict_kwargs,
+            clip=clip,
+        )
+    if model_type == "rf":
+        return fit_binary_rf_predict(
+            train_features,
+            train_labels,
+            test_features,
+            **rf_config,
+            clip=clip,
+            epsilon=PROBABILITY_EPSILON,
+        )
+    raise ValueError(f"Unsupported model_type: {model_type}")
+
+
+def estimate_nuisance_functions_empirical(
+    data,
+    x_cols,
+    y_grid,
+    *,
+    model_type="kan",
+    k_folds=EMPIRICAL_K_FOLDS,
+    kan_steps=EMPIRICAL_KAN_STEPS,
+    kan_config=None,
+    rf_config=None,
+):
     """
-    Estimates nuisance functions using K-fold cross-fitting.
+    Estimate the reduced-form nuisance bundle via cross-fitting.
+
     - pi_hat(X) = P(Z=1 | X)
-    - p_hat(X, Z) = P(W=1 | X, Z)
-    - mu_hat_y(X, W) = E[1{Y<=y} | X, W]
-    - mu_hat_y_w1(X) = E[1{Y<=y} | X, W=1]
-    - mu_hat_y_w0(X) = E[1{Y<=y} | X, W=0]
+    - p_hat_0(X) = P(W=1 | Z=0, X)
+    - p_hat_1(X) = P(W=1 | Z=1, X)
+    - mu_hat_0(y, X) = E[1{Y<=y} | Z=0, X]
+    - mu_hat_1(y, X) = E[1{Y<=y} | Z=1, X]
     """
     kf = KFold(n_splits=k_folds, shuffle=True, random_state=42)
-    
-    pi_hat_oos = np.zeros(len(data))
-    p_hat_oos = np.zeros(len(data))
-    mu_hat_y_oos = np.zeros((len(data), len(y_grid)))
-    mu_hat_y_w1_oos = np.zeros((len(data), len(y_grid)))
-    mu_hat_y_w0_oos = np.zeros((len(data), len(y_grid)))
+    kan_config = dict(kan_config or {})
+    kan_config.setdefault("steps", kan_steps)
+    kan_config = build_kan_config(**kan_config)
+    rf_config = build_rf_config(**(rf_config or {}))
+
+    n_obs = len(data)
+    n_grid = len(y_grid)
+    pi_hat_oos = np.zeros(n_obs)
+    p_hat_0_oos = np.zeros(n_obs)
+    p_hat_1_oos = np.zeros(n_obs)
+    mu_hat_0_oos = np.zeros((n_obs, n_grid))
+    mu_hat_1_oos = np.zeros((n_obs, n_grid))
 
     for train_index, test_index in kf.split(data):
-        data_train, data_test = data.iloc[train_index], data.iloc[test_index]
-        
-        # Convert to tensors
-        X_train = torch.from_numpy(data_train[X_cols].values).float()
-        X_test = torch.from_numpy(data_test[X_cols].values).float()
-        Z_train = torch.from_numpy(data_train['Z'].values).float().unsqueeze(1)
-        W_train = torch.from_numpy(data_train['W'].values).float().unsqueeze(1)
+        data_train = data.iloc[train_index]
+        data_test = data.iloc[test_index]
 
-        # Estimate pi(x) = P(Z=1 | X)
-        pi_model = KAN(width=[len(X_cols), 1], grid=5, k=3, seed=42)
-        pi_model.fit({'train_input': X_train, 'train_label': Z_train, 'test_input': X_test, 'test_label': torch.from_numpy(data_test['Z'].values).float().unsqueeze(1)}, steps=100)
-        pi_hat_oos[test_index] = torch.sigmoid(pi_model(X_test)).detach().numpy().flatten()
+        x_test = data_test[x_cols].to_numpy()
+        xz_test_z0 = np.column_stack([x_test, np.zeros(len(data_test), dtype=float)])
+        xz_test_z1 = np.column_stack([x_test, np.ones(len(data_test), dtype=float)])
 
-        # Estimate p(x, z) = P(W=1 | Z, X)
-        XZ_train = torch.from_numpy(data_train[X_cols + ['Z']].values).float()
-        XZ_test = torch.from_numpy(data_test[X_cols + ['Z']].values).float()
-        p_model = KAN(width=[len(X_cols) + 1, 1], grid=5, k=3, seed=42)
-        p_model.fit({'train_input': XZ_train, 'train_label': W_train, 'test_input': XZ_test, 'test_label': torch.from_numpy(data_test['W'].values).float().unsqueeze(1)}, steps=100)
-        p_hat_oos[test_index] = torch.sigmoid(p_model(XZ_test)).detach().numpy().flatten()
+        pi_hat_oos[test_index] = _predict_binary(
+            model_type,
+            data_train[x_cols].to_numpy(),
+            data_train["Z"].to_numpy(),
+            x_test,
+            kan_config=kan_config,
+            rf_config=rf_config,
+            clip=True,
+        )
 
-        for i, y_val in enumerate(y_grid):
-            data_train_y_loop = data_train.copy()
-            data_train_y_loop['Y_le_y'] = (data_train_y_loop['Y'] <= y_val).astype(int)
-            Y_le_y_train = torch.from_numpy(data_train_y_loop['Y_le_y'].values).float().unsqueeze(1)
+        p_hat_0_oos[test_index] = _predict_binary(
+            model_type,
+            data_train[x_cols + ["Z"]].to_numpy(),
+            data_train["W"].to_numpy(),
+            xz_test_z0,
+            kan_config=kan_config,
+            rf_config=rf_config,
+            clip=True,
+        )
+        p_hat_1_oos[test_index] = _predict_binary(
+            model_type,
+            data_train[x_cols + ["Z"]].to_numpy(),
+            data_train["W"].to_numpy(),
+            xz_test_z1,
+            kan_config=kan_config,
+            rf_config=rf_config,
+            clip=True,
+        )
 
-            # Estimate E[1{Y<=y} | X, W]
-            XW_train = torch.from_numpy(data_train_y_loop[X_cols + ['W']].values).float()
-            XW_test = torch.from_numpy(data_test[X_cols + ['W']].values).float()
-            if len(data_train_y_loop['Y_le_y'].unique()) == 1:
-                mu_hat_y_oos[test_index, i] = data_train_y_loop['Y_le_y'].iloc[0]
-            else:
-                mu_y_model = KAN(width=[len(X_cols) + 1, 1], grid=5, k=3, seed=42)
-                mu_y_model.fit({'train_input': XW_train, 'train_label': Y_le_y_train, 'test_input': XW_test, 'test_label': torch.from_numpy((data_test['Y'] <= y_val).astype(int).values).float().unsqueeze(1)}, steps=100)
-                mu_hat_y_oos[test_index, i] = torch.sigmoid(mu_y_model(XW_test)).detach().numpy().flatten()
+        for y_idx, y_val in enumerate(y_grid):
+            y_indicator = (data_train["Y"] <= y_val).astype(int).to_numpy()
 
-            # Estimate E[1{Y<=y} | X, W=1]
-            data_train_y_w1 = data_train_y_loop[data_train_y_loop['W'] == 1]
-            if len(data_train_y_w1) < 2 or len(data_train_y_w1['Y_le_y'].unique()) == 1:
-                prop_w1_y_le_y = data_train_y_loop[data_train_y_loop['W']==1]['Y_le_y'].mean() if len(data_train_y_w1)>0 else 0.5
-                mu_hat_y_w1_oos[test_index, i] = prop_w1_y_le_y if not np.isnan(prop_w1_y_le_y) else 0.5
-            else:
-                X_train_w1 = torch.from_numpy(data_train_y_w1[X_cols].values).float()
-                Y_le_y_train_w1 = torch.from_numpy(data_train_y_w1['Y_le_y'].values).float().unsqueeze(1)
-                mu_y_w1_model = KAN(width=[len(X_cols), 1], grid=5, k=3, seed=42)
-                mu_y_w1_model.fit({'train_input': X_train_w1, 'train_label': Y_le_y_train_w1, 'test_input': X_test, 'test_label': torch.from_numpy((data_test['Y'] <= y_val).astype(int).values).float().unsqueeze(1)}, steps=100)
-                mu_hat_y_w1_oos[test_index, i] = torch.sigmoid(mu_y_w1_model(X_test)).detach().numpy().flatten()
+            mu_hat_0_oos[test_index, y_idx] = _predict_binary(
+                model_type,
+                data_train[x_cols + ["Z"]].to_numpy(),
+                y_indicator,
+                xz_test_z0,
+                kan_config=kan_config,
+                rf_config=rf_config,
+            )
+            mu_hat_1_oos[test_index, y_idx] = _predict_binary(
+                model_type,
+                data_train[x_cols + ["Z"]].to_numpy(),
+                y_indicator,
+                xz_test_z1,
+                kan_config=kan_config,
+                rf_config=rf_config,
+            )
 
-            # Estimate E[1{Y<=y} | X, W=0]
-            data_train_y_w0 = data_train_y_loop[data_train_y_loop['W'] == 0]
-            if len(data_train_y_w0) < 2 or len(data_train_y_w0['Y_le_y'].unique()) == 1:
-                prop_w0_y_le_y = data_train_y_loop[data_train_y_loop['W']==0]['Y_le_y'].mean() if len(data_train_y_w0)>0 else 0.5
-                mu_hat_y_w0_oos[test_index, i] = prop_w0_y_le_y if not np.isnan(prop_w0_y_le_y) else 0.5
-            else:
-                X_train_w0 = torch.from_numpy(data_train_y_w0[X_cols].values).float()
-                Y_le_y_train_w0 = torch.from_numpy(data_train_y_w0['Y_le_y'].values).float().unsqueeze(1)
-                mu_y_w0_model = KAN(width=[len(X_cols), 1], grid=5, k=3, seed=42)
-                mu_y_w0_model.fit({'train_input': X_train_w0, 'train_label': Y_le_y_train_w0, 'test_input': X_test, 'test_label': torch.from_numpy((data_test['Y'] <= y_val).astype(int).values).float().unsqueeze(1)}, steps=100)
-                mu_hat_y_w0_oos[test_index, i] = torch.sigmoid(mu_y_w0_model(X_test)).detach().numpy().flatten()
-                
-    nuisance_results = {
-        'pi_hat': pi_hat_oos, 'p_hat': p_hat_oos,
-        'mu_hat_y': mu_hat_y_oos,
-        'mu_hat_y_w1': mu_hat_y_w1_oos,
-        'mu_hat_y_w0': mu_hat_y_w0_oos
+    return {
+        "pi_hat": pi_hat_oos,
+        "p_hat_0": p_hat_0_oos,
+        "p_hat_1": p_hat_1_oos,
+        "mu_hat_0": mu_hat_0_oos,
+        "mu_hat_1": mu_hat_1_oos,
     }
-    return nuisance_results
 
-# --- 3. D-LATE Estimator ---
-def dlate_estimator_empirical(data, nuisance_results, y_grid):
-    Z = data['Z'].values
-    W = data['W'].values
-    Y = data['Y'].values
-    
-    pi_hat = nuisance_results['pi_hat']
-    p_hat = nuisance_results['p_hat']
-    mu_hat_y_oos = nuisance_results['mu_hat_y']       # Shape (n_samples, n_y_grid)
-    mu_hat_y_w1_oos = nuisance_results['mu_hat_y_w1'] # Shape (n_samples, n_y_grid)
-    mu_hat_y_w0_oos = nuisance_results['mu_hat_y_w0'] # Shape (n_samples, n_y_grid)
 
-    epsilon = 1e-5 # Clipping value for probabilities
-    pi_hat_clipped = np.clip(pi_hat, epsilon, 1 - epsilon)
-    
-    # Instrumental variable propensity score term
-    prop_z_term = (Z - pi_hat_clipped) / (pi_hat_clipped * (1 - pi_hat_clipped))
-    
-    # Psi_beta: E[ ( (Z-pi(X))/(pi(X)(1-pi(X))) ) * (W - p(X,Z)) ]
-    psi_beta = prop_z_term * (W - p_hat)
-    mean_psi_beta = np.mean(psi_beta)
-    
-    if np.abs(mean_psi_beta) < epsilon: # Check if denominator is too small
-        print(f"Warning: Denominator E[psi_beta] = {mean_psi_beta:.4f} is close to zero. D-LATE estimates may be unstable.")
-        # Consider returning NaNs or raising an error
-        # For now, we'll proceed but the results might be unreliable.
-    
-    dlate_estimates = []
-    for i, y_val in enumerate(y_grid):
-        # alpha_hat_i(y) = E[1{Y<=y} | X_i, W=1] - E[1{Y<=y} | X_i, W=0] (using OOS predictions)
-        alpha_hat_y_oos = mu_hat_y_w1_oos[:, i] - mu_hat_y_w0_oos[:, i]
-        
-        # Psi_alpha(y): E [ prop_z_term * (1{Y<=y} - E[1{Y<=y}|X,W]) + alpha_hat_y_oos ]
-        psi_alpha_term1 = prop_z_term * ((Y <= y_val).astype(int) - mu_hat_y_oos[:, i])
-        psi_alpha_y = psi_alpha_term1 + alpha_hat_y_oos
-        
-        mean_psi_alpha_y = np.mean(psi_alpha_y)
-        
-        if np.abs(mean_psi_beta) < epsilon: # Avoid division by (near) zero
-             dlate_y = np.nan
+def compute_dlate_score_objects(data, nuisance_results, y_grid):
+    """Compute point estimates and score objects for D-IV-LATE."""
+    return compute_dlate_score_objects_common(
+        data,
+        nuisance_results,
+        y_grid,
+        epsilon=PROBABILITY_EPSILON,
+    )
+
+
+def dlate_estimator_empirical(data, nuisance_results, y_grid, *, return_diagnostics=False):
+    """Estimate the D-LATE curve from the nuisance bundle."""
+    score_objects = compute_dlate_score_objects(data, nuisance_results, y_grid)
+    if return_diagnostics:
+        return score_objects["dlate"], {
+            "mean_psi_beta": score_objects["mean_psi_beta"],
+            "abs_mean_psi_beta": score_objects["abs_mean_psi_beta"],
+            "near_zero_denominator": score_objects["near_zero_denominator"],
+        }
+    return score_objects["dlate"]
+
+
+def compute_first_stage_diagnostics(data, x_cols):
+    """Compute simple LPM first-stage diagnostics for the instrument."""
+    x_matrix = data[x_cols].to_numpy(dtype=float)
+    z_values = data["Z"].to_numpy(dtype=float)
+    w_values = data["W"].to_numpy(dtype=float)
+    n_obs = len(data)
+
+    intercept = np.ones((n_obs, 1))
+    reduced = np.column_stack([intercept, x_matrix])
+    full = np.column_stack([intercept, x_matrix, z_values])
+
+    beta_reduced, *_ = np.linalg.lstsq(reduced, w_values, rcond=None)
+    beta_full, *_ = np.linalg.lstsq(full, w_values, rcond=None)
+    residual_reduced = w_values - reduced @ beta_reduced
+    residual_full = w_values - full @ beta_full
+    sse_reduced = float(np.dot(residual_reduced, residual_reduced))
+    sse_full = float(np.dot(residual_full, residual_full))
+
+    df_num = 1
+    df_den = max(n_obs - full.shape[1], 1)
+    if sse_full <= 0:
+        first_stage_f = np.nan
+    else:
+        numerator = max(sse_reduced - sse_full, 0.0) / df_num
+        denominator = sse_full / df_den
+        first_stage_f = np.nan if denominator <= 0 else float(numerator / denominator)
+    partial_r2 = np.nan if sse_reduced <= 0 else float(max(1.0 - sse_full / sse_reduced, 0.0))
+
+    sample_first_stage = float(data.groupby("Z")["W"].mean().diff().iloc[-1])
+    return {
+        "sample_first_stage": sample_first_stage,
+        "first_stage_f_stat": first_stage_f,
+        "partial_r2": partial_r2,
+    }
+
+
+def compute_overlap_diagnostics(data, nuisance_results, x_cols, *, trim_bounds=(0.05, 0.95)):
+    """Summarize overlap and balance diagnostics for the empirical pipeline."""
+    lower, upper = trim_bounds
+    pi_hat = clip_probabilities(nuisance_results["pi_hat"], epsilon=PROBABILITY_EPSILON)
+    trim_mask = (pi_hat >= lower) & (pi_hat <= upper)
+
+    balance_rows = []
+    for column in x_cols:
+        z0 = data.loc[data["Z"] == 0, column].to_numpy(dtype=float)
+        z1 = data.loc[data["Z"] == 1, column].to_numpy(dtype=float)
+        pooled_std = np.sqrt(0.5 * (np.var(z0, ddof=0) + np.var(z1, ddof=0)))
+        if pooled_std <= 0:
+            smd = 0.0
         else:
-            dlate_y = mean_psi_alpha_y / mean_psi_beta
-        dlate_estimates.append(dlate_y)
-        
-    return np.array(dlate_estimates)
+            smd = float((np.mean(z1) - np.mean(z0)) / pooled_std)
+        balance_rows.append({"covariate": column, "standardized_mean_difference": smd})
 
-# --- 4. Main Execution Block ---
-def main():
+    return {
+        "pi_outside_05_95_share": float(1.0 - np.mean(trim_mask)),
+        "pi_outside_05_95_count": int(np.sum(~trim_mask)),
+        "pi_hat_min": float(np.min(pi_hat)),
+        "pi_hat_max": float(np.max(pi_hat)),
+        "pi_hat_p05": float(np.quantile(pi_hat, 0.05)),
+        "pi_hat_p95": float(np.quantile(pi_hat, 0.95)),
+        "balance_df": pd.DataFrame(balance_rows),
+    }
+
+
+def run_empirical_model(
+    data,
+    x_cols,
+    y_grid,
+    *,
+    model_type,
+    k_folds=EMPIRICAL_K_FOLDS,
+    kan_steps=EMPIRICAL_KAN_STEPS,
+    kan_config=None,
+    rf_config=None,
+):
+    """Run one empirical nuisance-model specification and return curve plus diagnostics."""
+    nuisance_results = estimate_nuisance_functions_empirical(
+        data,
+        x_cols,
+        y_grid,
+        model_type=model_type,
+        k_folds=k_folds,
+        kan_steps=kan_steps,
+        kan_config=kan_config,
+        rf_config=rf_config,
+    )
+    dlate_estimates, estimator_diagnostics = dlate_estimator_empirical(
+        data,
+        nuisance_results,
+        y_grid,
+        return_diagnostics=True,
+    )
+    first_stage_diagnostics = compute_first_stage_diagnostics(data, x_cols)
+    overlap_diagnostics = compute_overlap_diagnostics(data, nuisance_results, x_cols)
+
+    kan_config = dict(kan_config or {})
+    kan_config.setdefault("steps", kan_steps)
+    kan_config = build_kan_config(**kan_config)
+    rf_config = build_rf_config(**(rf_config or {}))
+    model_config_id = (
+        build_kan_config_id(kan_config)
+        if model_type == "kan"
+        else build_rf_config_id(rf_config)
+    )
+
+    curve_df = pd.DataFrame(
+        {
+            "y_value": y_grid,
+            "dlate_estimate": dlate_estimates,
+            "model": model_type,
+            "model_config_id": model_config_id,
+        }
+    )
+    diagnostics = {
+        "model": model_type,
+        "model_config_id": model_config_id,
+        **first_stage_diagnostics,
+        "mean_psi_beta": estimator_diagnostics["mean_psi_beta"],
+        "abs_mean_psi_beta": estimator_diagnostics["abs_mean_psi_beta"],
+        "near_zero_denominator": int(estimator_diagnostics["near_zero_denominator"]),
+        "pi_outside_05_95_share": overlap_diagnostics["pi_outside_05_95_share"],
+        "pi_outside_05_95_count": overlap_diagnostics["pi_outside_05_95_count"],
+        "pi_hat_min": overlap_diagnostics["pi_hat_min"],
+        "pi_hat_max": overlap_diagnostics["pi_hat_max"],
+        "pi_hat_p05": overlap_diagnostics["pi_hat_p05"],
+        "pi_hat_p95": overlap_diagnostics["pi_hat_p95"],
+    }
+    return {
+        "curve": curve_df,
+        "diagnostics": diagnostics,
+        "balance": overlap_diagnostics["balance_df"],
+        "nuisance_results": nuisance_results,
+    }
+
+
+def save_empirical_curve_plot(curve_df, plot_path, *, title, ylabel):
+    """Persist a single empirical curve plot."""
+    plt.figure(figsize=(10, 6))
+    plt.plot(curve_df["y_value"], curve_df["dlate_estimate"], marker="o", linestyle="-")
+    plt.title(title)
+    plt.xlabel("Net Financial Assets (y)")
+    plt.ylabel(ylabel)
+    plt.grid(True)
+    plt.savefig(plot_path)
+    plt.close()
+
+
+def main(
+    *,
+    data_path=DEFAULT_DATA_PATH,
+    results_dir=DEFAULT_RESULTS_DIR,
+    y_grid_points=30,
+    k_folds=EMPIRICAL_K_FOLDS,
+    kan_steps=EMPIRICAL_KAN_STEPS,
+):
+    """
+    Run the legacy single-model empirical KAN pipeline.
+
+    This remains as a compatibility entrypoint for the existing smoke test and
+    manuscript asset names. Comparative and robustness execution is handled by
+    the wrapper script.
+    """
     print("Starting D-LATE estimation for empirical application...")
-    
-    # Ensure results directory exists for outputs
-    output_dir = "KAN-D-IV-LATE/results"
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        
-    # 1. Load and prepare data
-    data, X_cols = load_and_prepare_data(csv_path='KAN-D-IV-LATE/data/pension.csv')
-    if data.empty or len(data) < 100: # Basic check for sufficient data
+    results_dir = Path(results_dir)
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    data, x_cols = load_and_prepare_data(csv_path=data_path)
+    if data.empty or len(data) < 100:
         print("Data loading or preprocessing resulted in insufficient data. Exiting.")
         return
 
-    print(f"Data loaded: {len(data)} observations after cleaning.")
+    processed_data, _ = preprocess_empirical_data(data, x_cols, preprocess_mode="raw")
+    y_grid = build_empirical_y_grid(processed_data, y_grid_points=y_grid_points)
+    print(f"Data loaded: {len(processed_data)} observations after cleaning.")
+    print(
+        f"y_grid for D-LATE: from {float(y_grid.min()):.2f} to {float(y_grid.max()):.2f} "
+        f"with {len(y_grid)} points."
+    )
 
-    # 2. Define the grid of y values for D-LATE
-    # Based on the distribution of 'Y' (net_tfa)
-    min_y = np.percentile(data['Y'], 1)  # Use 1st percentile to avoid extreme outliers
-    max_y = np.percentile(data['Y'], 99)  # Use 99th percentile
-    if min_y >= max_y: # Handle cases where percentiles are too close or inverted
-        min_y = data['Y'].min()
-        max_y = data['Y'].max()
-        if min_y >= max_y:
-             print("Cannot determine a valid y_grid. Outcome variable might have no variance or too few unique values.")
-             return
-
-    y_grid = np.linspace(min_y, max_y, 30) # 30 points for the D-LATE curve
-    print(f"y_grid for D-LATE: from {min_y:.2f} to {max_y:.2f} with {len(y_grid)} points.")
-    
-    # 3. Estimate nuisance functions
     print("Estimating nuisance functions (this may take a few minutes)...")
-    nuisance_results = estimate_nuisance_functions_empirical(data, X_cols, y_grid, k_folds=5)
-    
-    # 4. Estimate D-LATE
+    outputs = run_empirical_model(
+        processed_data,
+        x_cols,
+        y_grid,
+        model_type="kan",
+        k_folds=k_folds,
+        kan_steps=kan_steps,
+    )
+
     print("Estimating D-LATE...")
-    dlate_estimates = dlate_estimator_empirical(data, nuisance_results, y_grid)
-    
-    # 5. Print, Save, and Plot Results
+    results_df = outputs["curve"][["y_value", "dlate_estimate"]].copy()
+
     print("\n--- D-LATE Estimation Results ---")
-    results_df = pd.DataFrame({'y_value': y_grid, 'dlate_estimate': dlate_estimates})
     print(results_df)
-    
-    results_csv_path = os.path.join(output_dir, 'empirical_kan-d-iv-late_results.csv')
+
+    results_csv_path = results_dir / "empirical_kan-d-iv-late_results.csv"
     results_df.to_csv(results_csv_path, index=False)
     print(f"\nEmpirical D-LATE results saved to {results_csv_path}")
 
-    plot_path = os.path.join(output_dir, 'empirical_kan-d-iv-late_plot.png')
-    plt.figure(figsize=(10, 6))
-    plt.plot(y_grid, dlate_estimates, marker='o', linestyle='-')
-    plt.title('Estimated Distributional LATE (KAN-D-LATE) - Pension Data')
-    plt.xlabel('Net Financial Assets (y)')
-    plt.ylabel('KAN-D-LATE(y)')
-    plt.grid(True)
-    plt.savefig(plot_path)
+    plot_path = results_dir / "empirical_kan-d-iv-late_plot.png"
+    save_empirical_curve_plot(
+        results_df,
+        plot_path,
+        title="Estimated Distributional LATE (KAN-D-LATE) - Pension Data",
+        ylabel="KAN-D-LATE(y)",
+    )
     print(f"Plot saved to {plot_path}")
-    # plt.show() # Typically not used in automated scripts
 
     print("\n--- End of Empirical Application ---")
+
 
 if __name__ == "__main__":
     main()

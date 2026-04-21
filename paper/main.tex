@@ -1,0 +1,444 @@
+\documentclass[final,3p,fleqn, 10pt]{elsarticle}
+\input{preamble}
+\begin{document}
+\begin{frontmatter}
+\title{Flexible Nuisance Learning for D-IV-LATE: Point Estimation Gains, Inference Limits, and Model Choice}
+\author{Charles Shaw. \\This version \today}
+\date{this version \today}
+
+  \begin{abstract}
+We study how the choice of nuisance learner affects estimation of the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE) within a double/debiased machine learning framework. We compare a Random Forest benchmark against Kolmogorov-Arnold Networks (KANs) and organize the paper around three evidence blocks: a corrected estimand-aligned simulation benchmark, a targeted KAN ablation, and an empirical application to the effect of 401(k) participation on the distribution of net financial assets.
+
+The simulation benchmark uses explicit monotone principal strata and a fixed complier truth bundle across 27 scenarios spanning three design families, three instrument-strength regimes, and three sample sizes. In the full matrix, the baseline KAN implementation attains lower integrated RMSE than Random Forests in all 27 scenarios and lower runtime in 26 of 27. A targeted ablation across representative scenarios then selects a shorter KAN training schedule as the best point-estimation variant. The empirical application shows that nuisance-model choice remains substantively important: RF and KAN estimates differ materially in the core specification and across robustness checks, with frequent sign reversals along the estimated D-IV-LATE curve.
+
+The central limitation is now inferential rather than identification-theoretic. This revision replaces the earlier residualized score with a reduced-form orthogonal level-score estimator for the conditional-IV D-IV-LATE target. Because that correction changes the underlying numerical pipeline, the simulation, inference, and empirical results reported below must be treated as provisional until regenerated under the corrected estimator. The resulting conclusion is therefore mixed. KANs remain promising nuisance learners for D-IV-LATE point estimation, but they are not yet validated as a default inferential layer.
+
+\vspace{10pt}
+Keywords Distributional Treatment Effects, Instrumental Variables, Double Machine Learning, Kolmogorov-Arnold Networks, Random Forests, Uncertainty Quantification, Model Choice
+\end{abstract}
+\end{frontmatter}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Understanding treatment effects across the entire outcome distribution is often more informative than focusing on a single average effect. In instrumental-variables settings, this leads naturally to the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE), which traces how an endogenous binary treatment shifts the outcome distribution for compliers \citep{imbens1997estimating, abadie2002bootstrap}. The double/debiased machine learning (DML) framework is attractive in this setting because it permits flexible nuisance estimation while retaining orthogonality-based protection against first-order regularization bias \citep{chernozhukov2018debiased}.
+
+What DML does not settle is the practical choice of nuisance learner. That choice is often treated as secondary, but in distributional IV problems it can affect both the point estimate and the stability of the implied inferential procedure. This paper studies that question directly by comparing a Random Forest benchmark to Kolmogorov-Arnold Networks (KANs), a spline-based neural architecture motivated by the Kolmogorov-Arnold representation theorem \citep{liu2024kan, kratsios2025kolmogorov}. The relevant question is not whether KANs are universally superior. It is whether they improve D-IV-LATE point estimation under a disciplined benchmark, and whether any such gains survive contact with uncertainty quantification.
+
+Our evidence is organized around three components. First, we rebuild the simulation benchmark so that the reported truth is a genuine complier D-IV-LATE generated from explicit monotone principal strata. The resulting full matrix spans three design families, three instrument-strength regimes, and three sample sizes. In that benchmark the baseline KAN implementation achieves lower integrated RMSE than Random Forests in all 27 scenarios and lower runtime in 26 of 27. Second, we run a targeted KAN ablation and find that a shorter training schedule slightly improves on the baseline KAN configuration, suggesting that the simulation gains are not driven by a single ad hoc tuning choice. Third, we revisit the 401(k) application and find that the nuisance-model choice remains substantively important in the data: RF and KAN estimates differ materially in the core specification and across robustness checks. Because the estimator itself has now been corrected, these numerical sections should be read as placeholders until they are regenerated under the corrected code path.
+
+The paper's main result is therefore not a blanket endorsement of KANs. A dedicated inference validation study shows that KAN-based pointwise intervals undercover badly under both asymptotic and bootstrap constructions. Random Forest intervals are materially better calibrated, although often much wider. The strongest defensible conclusion is thus mixed: KANs are promising for D-IV-LATE point estimation, but they are not yet validated as an end-to-end inferential default.
+
+This paper makes four contributions. First, it provides a corrected and reproducible benchmark for D-IV-LATE model comparison. Second, it documents large and systematic point-estimation gains from flexible spline-based nuisance learning in that benchmark. Third, it shows that those gains do not eliminate substantive model-choice sensitivity in an empirical application. Fourth, it demonstrates that point-estimation gains and inferential validity need not move together, and that this separation matters for what can be claimed credibly in applied work.
+
+The remainder of the paper is organized as follows. Section \ref{sec:lit_review} reviews the relevant literature. Section \ref{sec:framework} presents the identification framework for D-IV-LATE, and Section \ref{sec:estimation} describes the orthogonal-score estimator and the nuisance-learning implementations. Section \ref{sec:asymptotics} states the asymptotic result. Section \ref{sec:inference} evaluates uncertainty quantification, Section \ref{sec:simulations} reports the simulation benchmark and KAN ablation, Section \ref{sec:empirical_app} presents the 401(k) application, Section \ref{sec:caveat_emptor} discusses the implications for model choice, and Section \ref{sec:conclusion} concludes.
+
+\section{Literature Review}
+\label{sec:lit_review}
+
+Our research is situated at the confluence of several major streams of literature. These include the estimation of distributional treatment effects (DTEs), the use of instrumental variables (IV) to address endogeneity, modern machine learning (ML) methods for causal inference, and the emerging field of Kolmogorov-Arnold Networks (KANs). This paper synthesises these areas, particularly by exploring the integration of KANs into the double/debiased machine learning (DML) framework for estimating the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE).
+
+First, our work is grounded in the extensive literature on estimating treatment effects beyond simple averages. The foundational idea that policy evaluation should consider the entire distribution of outcomes dates back to seminal work on Quantile Treatment Effects (QTEs) by \citet{doksum1974empirical} and \citet{lehmann1975nonparametrics}. This field was significantly advanced by \citet{koenker2005quantile} with the development of quantile regression, and \citet{firpo2007efficient} further contributed methods for estimating quantile effects under endogeneity. More recent research has shifted focus towards directly estimating the DTE, which captures the impact on the cumulative distribution function (CDF), as seen in \citet{chernozhukov2013inference}. Our paper follows this distributional path, extending it to settings with endogenous treatments.
+
+Second, we connect with the classic literature on instrumental variables. The use of an instrument to address endogeneity was formalised by \citet{angrist1996identification}, who introduced the Local Average Treatment Effect (LATE). This parameter identifies the average causal effect for the subpopulation of 'compliers' whose treatment status is influenced by the instrument. The distributional analogue of the LATE was subsequently explored by \citet{imbens1997estimating} and \citet{abadie2002bootstrap}, who laid the groundwork for understanding distributional effects in an IV setting. This paper focuses on developing and comparing robust estimators for this specific distributional IV parameter.
+
+Third, our estimation strategy is built upon the DML framework pioneered by \citet{chernozhukov2018debiased}. The central innovation of DML is the use of Neyman-orthogonal moments. This allows for flexible ML models to estimate nuisance functions without introducing first-order bias into the main parameter estimate. This robustness to regularisation bias is critical for reliable inference. The DML approach has been successfully applied to various causal inference problems. This includes estimating DTEs in randomised experiments \citep{byambadalai24a}. We adapt and extend this powerful framework to the more complex case of an endogenous treatment requiring an IV, and critically examine the role of the ML model choice within this framework.
+
+Fourth, this paper introduces and leverages the emerging literature on Kolmogorov-Arnold Networks (KANs). KANs, introduced by \citet{liu2024kan}, are a new class of neural networks that replace the fixed activation functions of traditional MLPs with learnable, spline-based activation functions on the network edges. This architectural innovation is inspired by the Kolmogorov-Arnold representation theorem and allows KANs to adapt their structure to the data and potentially capture complex non-linearities with greater efficiency and accuracy. The theoretical properties of KANs, such as their approximation power in Besov spaces, have been explored by \citet{kratsios2025kolmogorov}. This provides a foundation for their use in settings requiring fast convergence rates for nuisance estimators. Other related work includes probabilistic extensions like GP-KANs \citep{chen2025gpkan} and applications to ITE estimation such as KANITE \citep{mehendale2025kanite}. Our work is among the first to integrate KANs into the DML framework for D-IV-LATE estimation and argues for their potential to improve the accuracy and reliability of causal estimates.
+
+Finally, our work relates to the broader literature on semiparametric theory and efficient estimation \citep{bickel1993efficient, newey1994asymptotic}. Through constructing estimators based on orthogonal influence functions within the DML framework, we aim for estimators that are robust to first-order errors in nuisance function estimation. This provides a crucial theoretical justification for our methods, bridging flexible ML estimation with rigorous econometric theory. It also highlights the importance of the properties of the chosen ML models (like KANs or Random Forests) in satisfying the underlying assumptions for valid inference.
+
+\section{Theoretical Framework and Identification}
+\label{sec:framework}
+
+We adopt the potential outcomes framework to define our causal parameter of interest. Let $Y_i$ be the observed outcome for unit $i$. Let $W_i \in \{0, 1\}$ be the indicator for a binary treatment that is potentially endogenous. We observe a vector of pre-treatment covariates $X_i \in \mathcal{X}$. To address the endogeneity of $W_i$, we assume the existence of a binary instrumental variable (IV), $Z_i \in \{0, 1\}$.
+
+Following the convention in the IV literature, we define two sets of potential outcomes. First, let $W_i(z)$ be the potential treatment status for unit $i$ if their instrument takes the value $z$. The observed treatment is then $W_i = W_i(Z_i)$. Second, let $Y_i(w, z)$ be the potential outcome for unit $i$ if their treatment status were $w$ and their instrument were $z$. The standard exclusion restriction assumes that the instrument $Z_i$ only affects the outcome $Y_i$ through its effect on the treatment $W_i$. This implies that $Y_i(w, 1) = Y_i(w, 0)$ for $w \in \{0, 1\}$. We can therefore simplify the notation to $Y_i(w)$, which denotes the potential outcome for unit $i$ under treatment $w$. The observed outcome is thus $Y_i = Y_i(W_i)$.
+
+The data consist of $n$ i.i.d. observations of $(Y_i, W_i, Z_i, X_i)$. Our goal is to estimate the causal effect of $W$ on the distribution of $Y$.
+
+\subsection{Assumptions and Parameter of Interest}
+
+To identify the causal effect of $W$ on the distribution of $Y$ using the instrument $Z$, we rely on the following standard assumptions conditional on the covariates $X$.
+
+\begin{assumption}[Independence and Exclusion] \label{ass:independence}
+The instrument $Z_i$ is independent of the potential outcomes and potential treatment assignments, conditional on the covariates $X_i$
+$$ Z_i \indep (Y_i(1), Y_i(0), W_i(1), W_i(0)) | X_i. $$
+The exclusion restriction is embedded in our definition of $Y_i(w)$, which does not depend on $Z_i$.
+\end{assumption}
+
+\begin{assumption}[Relevance] \label{ass:relevance}
+The instrument has a causal effect on the treatment assignment, conditional on $X_i$
+$$ \mathbb{P}(W_i=1 | Z_i=1, X_i) \neq \mathbb{P}(W_i=1 | Z_i=0, X_i). $$
+This ensures that there is a non-zero proportion of individuals whose treatment status is affected by the instrument.
+\end{assumption}
+
+\begin{assumption}[Monotonicity] \label{ass:monotonicity}
+The instrument affects the treatment decision in the same direction for all individuals. That is, for all $i$
+$$ W_i(1) \ge W_i(0). $$
+This assumption rules out the existence of "defiers"—individuals who would take the treatment if unencouraged ($Z_i=0$) but not if encouraged ($Z_i=1$).
+\end{assumption}
+
+Under these assumptions, the instrument allows us to identify the treatment effect for the subpopulation of "compliers"—individuals who comply with the instrument, i.e., those for whom $W_i(1) > W_i(0)$.
+
+Our parameter of interest is the Distributional Instrumental Variable LATE (D-IV-LATE).\footnote{We use D-IV-LATE to stand for \textit{Distributional Instrumental Variable} Local Average Treatment Effect. This distinguishes our parameter from the "D-LATE" acronym used by \citet{hoagland2020who} for \textit{Dynamic} Local Average Treatment Effect, a different concept focused on the evolution of average effects over time.} This is the difference in the potential outcome distributions for the population of compliers. For any outcome level $y \in \mathcal{Y}$, the D-IV-LATE is defined thus.
+\begin{equation} \label{eq:dlate_def}
+\Delta(y) := \mathbb{P}(Y(1) \le y | W_i(1) > W_i(0)) - \mathbb{P}(Y(0) \le y | W_i(1) > W_i(0)).
+\end{equation}
+
+\subsection{Identification}
+
+Following the seminal work of \citet{imbens1994}, the D-IV-LATE can be identified from the observed data. The key insight is that the difference in the conditional distribution of the outcome given the instrument can be written as a weighted average of the effects for compliers, always-takers, and never-takers. Under the assumptions, the effects for always-takers and never-takers are zero. This leaves only the effect for compliers.
+
+The D-IV-LATE is identified by the following ratio.
+\begin{equation} \label{eq:dlate_identification}
+\Delta(y) = \frac{\mathbb{E}[\mathbf{1}\{Y_i \le y\} | Z_i=1] - \mathbb{E}[\mathbf{1}\{Y_i \le y\} | Z_i=0]}{\mathbb{E}[W_i | Z_i=1] - \mathbb{E}[W_i | Z_i=0]}.
+\end{equation}
+The numerator is the intent-to-treat (ITT) effect on the distributional outcome $\mathbf{1}\{Y \le y\}$. The denominator is the ITT effect on the treatment uptake, which is also the proportion of compliers in the population. To account for covariates, we can express this conditional on $X$.
+\begin{equation} \label{eq:dlate_identification_cov_merged}
+\Delta(y) = \frac{\mathbb{E}_{X}[\mathbb{E}[\mathbf{1}\{Y_i \le y\} | Z_i=1, X_i] - \mathbb{E}[\mathbf{1}\{Y_i \le y\} | Z_i=0, X_i]]}{\mathbb{E}_{X}[\mathbb{E}[W_i | Z_i=1, X_i] - \mathbb{E}[W_i | Z_i=0, X_i]]}.
+\end{equation}
+While this classic result provides a path to identification, a simple "plug-in" estimator based on this formula, where the conditional expectations are replaced by machine learning predictions, typically suffers from regularisation bias. The next section develops estimators that overcome this challenge.
+
+\section{Estimation Strategy}
+\label{sec:estimation}
+
+While Equation \ref{eq:dlate_identification_cov_merged} identifies the D-IV-LATE as a ratio of reduced-form contrasts, a high-quality estimator still requires more than direct plug-in substitution. With flexible nuisance learners, naive plug-in estimation generally suffers from regularisation bias. The double/debiased machine learning (DML) strategy of \citet{chernozhukov2018debiased} addresses that problem by constructing scores whose first-order sensitivity to nuisance-estimation error is zero at the truth.
+
+\subsection{Reduced-Form Nuisance Functions}
+For a fixed threshold $y$, the corrected estimator in this paper is built from the reduced-form nuisance bundle
+\begin{align*}
+g_z(y, x) &:= \mathbb{E}[\ind\{Y \le y\} \mid Z=z, X=x], \qquad z \in \{0,1\},\\
+m_z(x) &:= \mathbb{E}[W \mid Z=z, X=x], \qquad z \in \{0,1\},\\
+\pi(x) &:= \mathbb{P}(Z=1 \mid X=x).
+\end{align*}
+The corresponding level parameters are
+\begin{align*}
+\alpha_0(y) &= \mathbb{E}[g_1(y, X) - g_0(y, X)],\\
+\beta_0 &= \mathbb{E}[m_1(X) - m_0(X)],
+\end{align*}
+so that $\Delta_0(y) = \alpha_0(y) / \beta_0$ whenever $\beta_0 \neq 0$. This nuisance bundle lines up directly with the identification formula in Section \ref{sec:framework}: $g_z$ is the reduced-form distribution of the observed outcome under instrument state $z$, and $m_z$ is the reduced-form first stage under the same state.
+
+\subsection{Machine Learning Models for Nuisance Functions}
+
+\subsubsection{Standard Machine Learning Models (e.g., Random Forests)}
+A common approach is to estimate nuisance functions using well-established supervised machine learning methods such as Random Forests, gradient boosting, or neural networks. Random Forests, for example, are ensembles of decision trees that are robust to overfitting and can capture non-linear relationships in the data. They are widely used in applied causal inference due to their good empirical performance and availability in standard software packages. In the context of the D-IV-LATE estimator, Random Forests are used for the reduced-form nuisance bundle $(\hat{g}_0, \hat{g}_1, \hat{m}_0, \hat{m}_1, \hat{\pi})$.
+
+\subsubsection{The Case for Kolmogorov-Arnold Networks (KANs)}
+\label{subsubsec:case_for_kans}
+While the DML framework provides robustness to first-order estimation errors, the choice of ML model for nuisance functions is far from inconsequential. We argue that Kolmogorov-Arnold Networks (KANs) present several theoretical and practical advantages over traditional models, such as Random Forests or standard Multi-Layer Perceptrons (MLPs), for this task.
+
+First, KANs offer superior approximation capabilities. Unlike MLPs, which learn global, fixed-basis activation functions, KANs learn activation functions on each edge of the network. These are typically parameterised as B-splines \citep{liu2024kan}. This allows them to adapt locally to the data and capture complex, highly non-linear relationships with greater efficiency. The Kolmogorov-Arnold representation theorem, which inspires the KAN architecture, suggests that any multivariate continuous function can be represented as a composition of univariate functions. KANs operationalise this theorem, providing a powerful tool for approximating the potentially intricate surfaces of the nuisance functions. This is particularly important where nuisance functions may exhibit complex and unknown forms of non-linearity.
+
+Second, recent theoretical work on KANs provides useful approximation results, especially for rich smoothness classes such as Besov spaces \citep{kratsios2025kolmogorov}. Those results make KANs attractive candidates for complex nuisance learning, but they do not by themselves establish the statistical convergence rates required for DML inference under the training pipeline used in this paper. We therefore use the KAN theory primarily as architectural motivation rather than as a completed nuisance-rate justification.
+
+Third, KANs can be more data-efficient. By learning the activation functions, KANs can often achieve a given level of accuracy with a smaller network and fewer parameters than a corresponding MLP. This is advantageous in the D-IV-LATE setting where we must estimate the reduced-form nuisance surfaces $g_0(y, x)$ and $g_1(y, x)$ over an outcome grid.
+
+\subsubsection{Nuisance Function Estimation with KANs: Implementation Details}
+\label{subsubsec:kans_implementation}
+The practical implementation of our KAN-D-IV-LATE estimator relies on the \texttt{efficient-kan} library\footnote{Our specific implementation is available at \url{https://github.com/shawcharles/efficient-kan}. The original KAN concept was introduced by \citet{liu2024kan}.} which is a PyTorch-based version designed for improved computational performance.
+
+For estimating $\hat{\pi}(x)$, $\hat{m}_0(x)$, $\hat{m}_1(x)$, $\hat{g}_0(y,x)$, and $\hat{g}_1(y,x)$, we use KAN architectures specified by the \texttt{layers\_hidden} parameter in \texttt{efficient-kan}. For all nuisance functions, we use a structure of \texttt{[input\_dim, 16, 1]}. This structure corresponds to an input layer, one hidden layer with 16 neurons, and a single output neuron. The \texttt{input\_dim} varies by nuisance function: it is $d_X$ for $\hat{\pi}(x)$ and $d_X+1$ for reduced-form nuisances that include the instrument indicator as an input. In the active implementation, $\hat{m}_0$ and $\hat{m}_1$ are obtained by fitting a single learner for $\mathbb{E}[W \mid Z, X]$ and evaluating it at $Z=0$ and $Z=1$; $\hat{g}_0$ and $\hat{g}_1$ are obtained analogously from a learner for $\mathbb{E}[\ind\{Y \le y\} \mid Z, X]$.
+
+The baseline KAN specification used in the core simulation benchmark employs cubic splines with \texttt{grid\_size} 4, AdamW with learning rate $1 \times 10^{-3}$, weight decay $1 \times 10^{-4}$, and an L1-type spline regularization penalty of $1 \times 10^{-4}$. In the full benchmark this baseline KAN was trained for 25 optimization steps. The empirical pipeline, by contrast, used a fixed higher-step KAN specification in order to preserve comparability with the canonical application code. We therefore treat the later KAN ablation as a separate model-selection exercise rather than as post hoc retuning of the main benchmark.
+
+The \texttt{efficient-kan} library provides internal L1-type regularization on spline weights through \texttt{model.regularization\_loss()}, which we add directly to the training loss. For numerical stability, if the minority-class count for a binary nuisance target within a training fold falls below a prespecified threshold, KAN fitting is bypassed and the predictor is set to the majority-class value.
+
+Cross-fitting varies by experiment. The main simulation benchmark uses $K=3$ folds for computational tractability across the 27-scenario matrix, whereas the empirical application uses $K=5$ folds. Section \ref{subsec:sim_dgp2} reports the targeted KAN ablation over width, grid size, training steps, and regularization strength. That ablation selects a shorter 10-step variant as the best point-estimation configuration across its representative scenarios.
+
+\subsection{Orthogonal Level Scores for D-IV-LATE}
+
+The corrected estimator uses orthogonal level scores for the reduced-form numerator and denominator. Let $\eta(y) := (g_0(y,\cdot), g_1(y,\cdot), m_0, m_1, \pi)$. For the denominator, define
+\begin{equation} \label{eq:psi_beta}
+\phi_{\beta, i}(\eta) =
+m_1(X_i) - m_0(X_i)
+ + \frac{Z_i}{\pi(X_i)} \bigl(W_i - m_1(X_i)\bigr)
+ - \frac{1-Z_i}{1-\pi(X_i)} \bigl(W_i - m_0(X_i)\bigr).
+\end{equation}
+For the numerator at threshold $y$, define
+\begin{align} \label{eq:psi_alpha}
+\phi_{\alpha, i}(y; \eta) = & \ g_1(y, X_i) - g_0(y, X_i) \nonumber \\
+& + \frac{Z_i}{\pi(X_i)} \bigl(\ind\{Y_i \le y\} - g_1(y, X_i)\bigr)
+ - \frac{1-Z_i}{1-\pi(X_i)} \bigl(\ind\{Y_i \le y\} - g_0(y, X_i)\bigr).
+\end{align}
+Standard iterated-expectation arguments imply
+\[
+\mathbb{E}\bigl[\phi_{\beta, i}(\eta_0)\bigr] = \beta_0,
+\qquad
+\mathbb{E}\bigl[\phi_{\alpha, i}(y; \eta_0)\bigr] = \alpha_0(y),
+\]
+so the D-IV-LATE remains the ratio $\Delta_0(y) = \alpha_0(y) / \beta_0$. The corresponding orthogonal ratio score is
+\[
+\psi_{\Delta, i}(y; \Delta, \eta) =
+\phi_{\alpha, i}(y; \eta) - \Delta \phi_{\beta, i}(\eta),
+\]
+whose moment vanishes at $(\Delta_0(y), \eta_0)$. In practice we estimate $\Delta_0(y)$ by the ratio of cross-fitted sample means,
+\begin{equation} \label{eq:moment_condition_ratio}
+\hat{\Delta}(y) =
+\frac{\frac{1}{n} \sum_{i=1}^{n} \hat{\phi}_{\alpha, i}(y)}
+{\frac{1}{n} \sum_{i=1}^{n} \hat{\phi}_{\beta, i}}.
+\end{equation}
+This is the corrected estimator now implemented in the active code path.
+
+\subsection{Algorithm: Cross-Fitting}
+\label{subsec:cross_fitting_alg}
+To implement the estimator in practice and prevent overfitting bias from the use of machine learning, we use a $K$-fold cross-fitting procedure. The steps are as follows.
+First, the $n$ observations are randomly split into $K$ disjoint folds, denoted $I_k$ for $k=1, \dots, K$.
+Next, for each fold $k \in \{1, \dots, K\}$, the data in all folds except $k$ (the training set $I_k^c$) are used to estimate $\hat{\pi}_k(x)$, $\hat{m}_{0,k}(x)$, $\hat{m}_{1,k}(x)$, $\hat{g}_{0,k}(y,x)$, and $\hat{g}_{1,k}(y,x)$, using either Random Forests or KANs. In the active implementation, $\hat{m}_{0,k}$ and $\hat{m}_{1,k}$ come from a learner for $\mathbb{E}[W \mid Z, X]$ evaluated at $Z=0$ and $Z=1$, and $\hat{g}_{0,k}$ and $\hat{g}_{1,k}$ come from a learner for $\mathbb{E}[\ind\{Y \le y\} \mid Z, X]$ evaluated at the same counterfactual instrument states.
+Subsequently, for each observation $i \in I_k$, the fold-$k$ predictions are plugged into the score components
+    \begin{align*}
+        \hat{\phi}_{\beta, i} &= \hat{m}_{1,k}(X_i) - \hat{m}_{0,k}(X_i)
+        + \frac{Z_i}{\hat{\pi}_k(X_i)} \bigl(W_i - \hat{m}_{1,k}(X_i)\bigr)
+        - \frac{1-Z_i}{1-\hat{\pi}_k(X_i)} \bigl(W_i - \hat{m}_{0,k}(X_i)\bigr), \\
+        \hat{\phi}_{\alpha, i}(y) &= \hat{g}_{1,k}(y, X_i) - \hat{g}_{0,k}(y, X_i)
+        + \frac{Z_i}{\hat{\pi}_k(X_i)} \bigl(\ind\{Y_i \le y\} - \hat{g}_{1,k}(y, X_i)\bigr)
+        - \frac{1-Z_i}{1-\hat{\pi}_k(X_i)} \bigl(\ind\{Y_i \le y\} - \hat{g}_{0,k}(y, X_i)\bigr).
+    \end{align*}
+Finally, the estimate for each level $y$ is computed as the ratio in Equation \ref{eq:moment_condition_ratio}.
+This cross-fitting procedure ensures that for each observation, the nuisance function predictions are made by a model that was not trained on that observation. This avoids bias from overfitting and satisfies conditions required by asymptotic theory.
+
+\section{Asymptotic Theory for the Corrected Estimator}
+\label{sec:asymptotics}
+
+\begin{assumption}[Overlap and First-Stage Strength]
+\label{ass:score_overlap}
+There exists $\epsilon > 0$ such that $\epsilon \le \pi_0(X) \le 1-\epsilon$ almost surely, and the denominator satisfies $|\beta_0| \ge \epsilon$.
+\end{assumption}
+
+\begin{assumption}[Cross-Fitted Nuisance Accuracy]
+\label{ass:score_rates}
+For each fixed $y$, the nuisance estimators are cross-fitted and satisfy
+\[
+\|\hat{\pi} - \pi_0\|_2 \sum_{z=0}^{1} \|\hat{m}_z - m_{0,z}\|_2 = o_p(n^{-1/2}),
+\qquad
+\|\hat{\pi} - \pi_0\|_2 \sum_{z=0}^{1} \|\hat{g}_z(y,\cdot) - g_{0,z}(y,\cdot)\|_2 = o_p(n^{-1/2}),
+\]
+with all nuisance estimates uniformly bounded in probability.
+\end{assumption}
+
+Assumption \ref{ass:score_rates} is the standard product-rate requirement behind DML arguments: first-order nuisance error drops out by orthogonality, so only second-order products remain. The corrected level scores in Equations \ref{eq:psi_beta} and \ref{eq:psi_alpha} are orthogonal with respect to perturbations of $(g_0, g_1, m_0, m_1, \pi)$ around the truth.
+
+\begin{theorem}[Pointwise Asymptotic Linearity]
+\label{thm:pointwise_asymptotics}
+Under Assumptions \ref{ass:independence}--\ref{ass:monotonicity}, \ref{ass:score_overlap}, and \ref{ass:score_rates}, for each fixed threshold $y$,
+\[
+\sqrt{n}\bigl(\hat{\Delta}(y) - \Delta_0(y)\bigr)
+=
+\frac{1}{\beta_0}\frac{1}{\sqrt{n}}\sum_{i=1}^{n}
+\Bigl(
+\phi_{\alpha, i}(y; \eta_0)
+- \Delta_0(y)\phi_{\beta, i}(\eta_0)
+\Bigr)
+ + o_p(1).
+\]
+Consequently,
+\[
+\sqrt{n}\bigl(\hat{\Delta}(y) - \Delta_0(y)\bigr)
+\rightsquigarrow
+\mathcal{N}\bigl(0, \sigma^2(y)\bigr),
+\]
+where
+\[
+\sigma^2(y)
+=
+\frac{\Var\bigl(\phi_{\alpha, i}(y; \eta_0) - \Delta_0(y)\phi_{\beta, i}(\eta_0)\bigr)}{\beta_0^2}.
+\]
+\end{theorem}
+
+The variance formula used in the code is the sample analogue of the influence representation in Theorem \ref{thm:pointwise_asymptotics}. For fixed $y$, this yields standard pointwise Wald intervals once the corrected estimator is used throughout the pipeline. The theorem is intentionally pointwise rather than uniform over $y$; simultaneous inference for an entire estimated curve requires stronger empirical-process conditions and is left to future work.
+
+One practical consequence is immediate. The corrected estimator in Equations \ref{eq:psi_beta}--\ref{eq:moment_condition_ratio} is not numerically equivalent to the residualized score used in the earlier draft. Any simulation, inference, or empirical result produced under that earlier code path is therefore provisional and must be regenerated under the corrected estimator before the paper is submission-ready.
+
+\section{Statistical Inference and Uncertainty Quantification}
+\label{sec:inference}
+
+Theorem \ref{thm:pointwise_asymptotics} supplies a pointwise asymptotic justification for Wald intervals under the corrected estimator. That does not eliminate the need for finite-sample validation. Flexible nuisance learners, denominator fragility, and repeated estimation over a $y$-grid can all degrade coverage in practice. We therefore study inference empirically as well as theoretically.
+
+For each estimated D-IV-LATE curve we construct pointwise asymptotic intervals using the influence-function variance estimator implied by Theorem \ref{thm:pointwise_asymptotics}. We also construct a resampling-based alternative using a bootstrap that preserves the sample-splitting structure. The inferential comparison is conducted in three representative simulation scenarios: \texttt{smooth\_low--weak--n500}, \texttt{baseline--medium--n1000}, and \texttt{complex\_local--weak--n500}. Each model is evaluated over eight Monte Carlo replications, and coverage is averaged over the evaluation grid.
+
+Table \ref{tab:inference_summary} reports the resulting coverage and interval-width summaries at the nominal 95\% level. The pattern is unambiguous. KAN-based intervals are too narrow and undercover badly. Depending on the scenario, asymptotic KAN coverage ranges from 0.188 to 0.516, and bootstrap KAN coverage ranges from 0.203 to 0.266. Random Forest intervals are materially better calibrated: asymptotic RF coverage ranges from 0.766 to 0.984, although this comes at the cost of substantially wider intervals. The most extreme case is \texttt{smooth\_low--weak--n500}, where RF asymptotic coverage is near nominal at 0.984 but the mean asymptotic interval width is 51.09 and the bootstrap width is over 1,000.
+
+\begin{table}[htbp]
+\centering
+\caption{Inference-validation summary across three representative scenarios. Coverage is averaged across the evaluation grid; the nominal target is 0.95.}
+\label{tab:inference_summary}
+\begin{tabular}{@{}llrrrrl@{}}
+\toprule
+Scenario & Model & Asym. cov. & Boot. cov. & Asym. width & Boot. width & Preferred \\
+\midrule
+\texttt{smooth\_low, weak, n=500} & KAN & 0.516 & 0.250 & 1.33 & 1.88 & Asymptotic \\
+\texttt{smooth\_low, weak, n=500} & RF  & 0.984 & 0.984 & 51.09 & 1083.75 & Asymptotic \\
+\texttt{baseline, medium, n=1000} & KAN & 0.188 & 0.203 & 0.20 & 0.30 & Bootstrap \\
+\texttt{baseline, medium, n=1000} & RF  & 0.766 & 0.500 & 9.18 & 24.21 & Asymptotic \\
+\texttt{complex\_local, weak, n=500} & KAN & 0.422 & 0.266 & 1.01 & 1.44 & Asymptotic \\
+\texttt{complex\_local, weak, n=500} & RF  & 0.797 & 0.641 & 34.44 & 73.44 & Asymptotic \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+These results substantially narrow the set of defensible claims. The current evidence supports KANs as point estimators, not as a validated inferential default. For the purposes of this paper, the empirical comparison is therefore interpreted primarily through point estimates and robustness patterns. Where interval-based interpretation is necessary, RF asymptotic inference is the safer baseline among the procedures we tested. Uniform inference over $y$ and more reliable interval construction for flexible nuisance learners remain open problems.
+
+\section{Simulation Study}
+\label{sec:simulations}
+
+The simulation evidence in this paper serves two purposes. First, it evaluates point-estimation performance in a corrected estimand-aligned benchmark. Second, it tests whether the KAN results are robust to a limited but explicit hyperparameter search.
+
+\subsection{Simulation Design 1: Full Benchmark Matrix}
+\label{subsec:sim_dgp1}
+
+The original simulation code path in this project mixed several distinct ideas: a treatment-assignment mechanism, a distributional truth object, and multiple partially incompatible score implementations. We replaced that setup with an explicit monotone principal-strata design so that the benchmark truth is a genuine complier D-IV-LATE rather than an ATE-style contrast mislabeled as LATE. For each scenario we generate a large truth bundle from the same data-generating process, compute the complier distributional effect on a fixed $y$-grid, and then compare cross-fitted RF and KAN estimators against that truth.
+
+The full benchmark crosses three design families (\texttt{smooth\_low}, \texttt{baseline}, and \texttt{complex\_local}), three instrument-strength regimes (\texttt{weak}, \texttt{medium}, and \texttt{strong}), and three sample sizes ($n \in \{500, 1000, 2000\}$). Each scenario uses 50 Monte Carlo replications, 10 evaluation points in $y$, $K=3$ cross-fitting folds, and a fixed truth bundle of size 50,000. The baseline model comparison is therefore a 27-scenario matrix.
+
+\begin{table}[htbp]
+\centering
+\caption{Full simulation benchmark summary for the phase-3 core matrix. Reported deltas are KAN minus RF.}
+\label{tab:sim_results_summary_dgp1}
+\begin{tabular}{@{}lr@{}}
+\toprule
+Metric & Value \\
+\midrule
+Number of scenarios & 27 \\
+Replications per scenario & 50 \\
+KAN lower integrated RMSE & 27/27 \\
+KAN lower mean absolute error & 27/27 \\
+KAN faster mean runtime & 26/27 \\
+Mean integrated RMSE delta & -5.100 \\
+Mean absolute-error delta & -3.267 \\
+Mean runtime delta (seconds) & -3.303 \\
+Mean fragile-denominator-share delta & -0.046 \\
+NaN-rate difference & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The performance gains are broad rather than isolated. KAN has lower integrated RMSE in every one of the 27 benchmark scenarios. The gains are largest in the weak-instrument cells, where RF also exhibits more frequent denominator fragility. For example, in \texttt{smooth\_low--weak--n2000} the integrated-RMSE difference is $-11.927$ in favor of KAN, and in \texttt{baseline--weak--n2000} it is $-11.891$. Runtime also favors KAN in 26 of 27 scenarios. The single exception is \texttt{baseline--strong--n500}, where KAN is slower by 0.155 seconds on average but still has much lower integrated RMSE ($0.189$ versus $2.040$).
+
+\subsection{Simulation Design 2: Targeted KAN Ablation}
+\label{subsec:sim_dgp2}
+
+To test whether the KAN gains depend on one arbitrary tuning choice, we run a restricted ablation on three representative scenarios: \texttt{baseline--weak--n2000}, \texttt{complex\_local--weak--n2000}, and \texttt{complex\_local--strong--n2000}. The ablation varies network width, spline grid size, training steps, and regularization strength. Selection is based on average integrated RMSE, with ties broken by fragile denominator share and then runtime.
+
+\begin{table}[htbp]
+\centering
+\caption{Targeted KAN ablation across three representative scenarios. Lower is better for RMSE and runtime.}
+\label{tab:sim_results_summary_dgp2}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+KAN configuration & Mean int. RMSE & Mean abs. error & Mean runtime \\
+\midrule
+\texttt{kan\_steps10\_v1} & 0.766 & 0.528 & 2.273 \\
+\texttt{kan\_width8\_v1}  & 0.773 & 0.539 & 5.097 \\
+\texttt{kan\_grid3\_v1}   & 0.774 & 0.551 & 5.138 \\
+\texttt{kan\_core\_v1}    & 0.775 & 0.547 & 5.300 \\
+\texttt{kan\_steps50\_v1} & 0.847 & 0.651 & 9.879 \\
+\texttt{kan\_width64\_v1} & 0.849 & 0.648 & 5.150 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The main message from the ablation is not that the benchmark was mis-tuned. The differences among the top KAN specifications are small, and several KAN variants outperform the baseline \texttt{kan\_core\_v1}. The most notable result is that a shorter 10-step schedule weakly dominates the baseline KAN on both integrated RMSE and runtime. This suggests that the KAN gains in the core benchmark are not especially fragile, but also that careful simplification can improve the KAN point-estimation pipeline further.
+
+\section{Empirical Application The Distributional Impact of 401(k) Participation on Financial Assets}
+\label{sec:empirical_app}
+
+We next study whether the simulation differences between RF and KAN nuisance learning matter in a standard empirical application. The setting is the distributional effect of 401(k) participation on net financial assets in the 1991 Survey of Income and Program Participation (SIPP).
+
+\subsection{Context and Data}
+We use the same SIPP sample analyzed by \citet{chernozhukov2004impact} and later work on 401(k) participation, consisting of 9,915 household reference persons. The outcome is net financial assets (\texttt{net\_tfa}), the treatment is 401(k) participation (\texttt{p401}), and the instrument is 401(k) eligibility (\texttt{e401}). Covariates include income, age, education, marital status, family size, two-earner status, defined-benefit pension status, IRA participation, and homeownership. The empirical pipeline estimates the D-IV-LATE curve over 30 grid points unless otherwise noted.
+
+\subsection{Instrument and First Stage}
+The first stage is strong in every empirical specification we ran. In the core raw specification, the sample first-stage effect is 0.705, the first-stage $F$-statistic is 12,594.96, and the corresponding partial $R^2$ is 0.560. These diagnostics make weak-instrument concerns secondary in this application. The more relevant issue is how the nuisance learner behaves when translating that strong first stage into a distributional effect curve.
+
+\subsection{Results and Comparative Discussion}
+The core empirical comparison already shows substantial divergence between RF and KAN. In the raw 30-point specification, the mean absolute gap between the two estimated curves is 0.187, the maximum pointwise gap is 0.745, and the sign-disagreement share is 0.833. In other words, the two nuisance learners often disagree not only in magnitude but in the direction of the estimated distributional effect at a given threshold $y$.
+
+\subsection{Diagnostic Analysis and Robustness Checks}
+\label{sec:robustness_empirical}
+
+The robustness exercise confirms that the empirical disagreement is not confined to one plotting choice. Table \ref{tab:empirical_robustness} summarizes five specifications: the core raw 30-point grid, coarser and finer grids, a standardized-covariate version, and a specification that trims observations using RF-based instrument-propensity cutoffs.
+
+\begin{table}[htbp]
+\centering
+\caption{Empirical RF-KAN divergence across robustness specifications.}
+\label{tab:empirical_robustness}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Specification & Mean abs. gap & Max abs. gap & Sign disagreement \\
+\midrule
+\texttt{core\_raw\_30}     & 0.187 & 0.745 & 0.833 \\
+\texttt{grid\_20\_raw}     & 0.165 & 0.857 & 0.850 \\
+\texttt{grid\_40\_raw}     & 0.204 & 0.886 & 0.500 \\
+\texttt{standardized\_30}  & 0.288 & 0.939 & 0.933 \\
+\texttt{trim\_rf\_05\_95}  & 4.555 & 15.347 & 0.633 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three findings stand out. First, the RF-KAN divergence is robust to changing the $y$-grid. Second, standardizing the continuous covariates does not reconcile the two procedures; if anything, the average gap becomes larger. Third, trimming does not eliminate disagreement. After trimming 757 observations based on RF propensity estimates outside $[0.05, 0.95]$, the mean absolute gap rises to 4.555 and the maximum gap to 15.347.
+
+The diagnostics also reveal why nuisance-model behavior matters. In the raw core specification, 60.7\% of KAN instrument-propensity estimates fall outside $[0.05, 0.95]$, compared with 7.6\% for RF. Standardization sharply changes that geometry for KAN, driving the same share to zero in the standardized specification, but the D-IV-LATE disagreement with RF still persists. This is not a simple first-stage weakness story: the first stage remains extremely strong throughout. Rather, it is a nuisance-geometry story in which different learners induce materially different orthogonal-score behavior even under the same identifying design.
+
+The empirical application therefore strengthens, rather than weakens, the main message from the simulations. Flexible nuisance learning can change substantive conclusions in D-IV-LATE work. At the same time, the inference results in Section \ref{sec:inference} imply that these KAN-based empirical curves should currently be interpreted as point-estimate evidence rather than as validated inferential objects.
+
+
+\section{Caveat Emptor The Role of Nuisance Function Estimators and Model Choice}
+\label{sec:caveat_emptor}
+
+The evidence in this paper changes what the relevant warning should be. The old caution was that model choice might matter. The stronger conclusion is that different components of performance matter differently. Point estimation, empirical shape recovery, numerical stability, and interval calibration do not necessarily rank models in the same order.
+
+For point estimation, the results are clearly favorable to KANs. In the corrected 27-scenario simulation matrix, the baseline KAN beats RF on integrated RMSE in every scenario and is almost always faster. The KAN ablation suggests that these gains are not a knife-edge artifact of one arbitrary configuration. For empirical interpretation, however, the same flexibility that helps KANs in the benchmark also produces materially different D-IV-LATE curves in the 401(k) application. That makes nuisance-model choice a first-order substantive issue rather than an implementation detail.
+
+For inference, the ranking changes. KAN intervals are not calibrated well enough to support primary claims. RF asymptotic intervals are imperfect and often very wide, but they are materially better behaved in the validation study. The practical implication is that applied researchers should not treat a strong point-estimation result as evidence of inferential validity. In flexible DML pipelines, those are separate questions.
+
+The appropriate ``caveat emptor'' is therefore not anti-machine-learning. It is methodological discipline. Researchers should benchmark nuisance learners under a truth-aligned design, document how robust the empirical curve is to preprocessing and tuning choices, and validate interval procedures directly before relying on them. Under the current evidence, KANs are best viewed as promising D-IV-LATE point estimators whose inferential layer remains unresolved.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper studies model choice for D-IV-LATE through a deliberately evidence-led sequence: a corrected simulation benchmark, a targeted KAN ablation, an empirical application, and an explicit inference validation exercise. Taken together, these results support a mixed conclusion.
+
+For point estimation, KANs are genuinely promising. In the corrected benchmark they dominate RF on integrated RMSE across the full 27-scenario matrix and are almost always faster. The ablation suggests that these gains are not especially fragile and that a shorter KAN training schedule can improve further on the baseline KAN configuration. In the 401(k) application, nuisance-model choice remains substantively important, with RF and KAN producing materially different D-IV-LATE curves across several reasonable specifications.
+
+For inference, however, the evidence is unfavorable to KANs. The validation study shows severe undercoverage for KAN-based pointwise intervals under both asymptotic and bootstrap constructions. RF asymptotic intervals are materially better calibrated, though often much wider. The strongest defensible interpretation is therefore that KANs improve D-IV-LATE point estimation but are not yet ready to serve as a default inferential layer.
+
+That mixed verdict is, in our view, the strongest publishable result. It is methodologically informative, empirically relevant, and harder to dismiss than a blanket claim of KAN superiority. The corrected estimator now rests on a genuine reduced-form orthogonal-score derivation, but that theoretical repair also resets the empirical burden: every numerical result used in the final paper must be regenerated under the corrected code path. Future work should therefore focus not only on whether KANs can beat classical learners on point RMSE, but also on how to pair flexible nuisance learning with reliable uncertainty quantification in semiparametric distributional-IV settings.
+
+
+
+
+
+\vskip 0.2in
+\begin{thebibliography}{99}
+\bibitem[Abadie(2002)]{abadie2002bootstrap} Abadie, A. (2002). Bootstrap tests for distributional treatment effects in instrumental variable models. \textit{Journal of the American statistical Association}, 97(457), 284-292.
+\bibitem[Angrist et al.(1996)]{angrist1996identification} Angrist, J. D., Imbens, G. W., \& Rubin, D. B. (1996). Identification of causal effects using instrumental variables. \textit{Journal of the American statistical Association}, 91(434), 444-455.
+\bibitem[Athey et al.(2019)]{athey2019generalized} Athey, S., Tibshirani, J., \& Wager, S. (2019). Generalized random forests. \textit{The Annals of Statistics}, 47(2), 1148-1178. % Placeholder - please verify
+\bibitem[Belloni et al.(2014)]{belloni2014high} Belloni, A., Chernozhukov, V., \& Hansen, C. (2014). Inference on treatment effects after selection among high-dimensional controls. \textit{The Review of Economic Studies}, 81(2), 608-650.
+\bibitem[Bickel et al.(1993)]{bickel1993efficient} Bickel, P. J., Klaassen, C. A., Ritov, Y., \& Wellner, J. A. (1993). \textit{Efficient and adaptive estimation for semiparametric models}. Springer.
+\bibitem[Byambadalai et al.(2024)]{byambadalai24a} Byambadalai, U., Oka, T., \& Yasui, S. (2024). Estimating distributional treatment effects in randomised experiments: Machine learning for variance reduction. In \textit{International Conference on Machine Learning} (pp. 5082-5113). PMLR.
+\bibitem[Chen(2024)]{chen2025gpkan} Chen, A. S. (2024). GP-KAN: Gaussian Process Kolmogorov-Arnold Networks. \textit{arXiv preprint arXiv:2407.18397}.
+\bibitem[Chernozhukov \& Hansen(2004)]{chernozhukov2004impact} Chernozhukov, V., \& Hansen, C. (2004). The impact of 401 (k) participation on the wealth distribution: an instrumental quantile regression analysis. \textit{The Review of Economic Studies}, 71(3), 735-764.
+\bibitem[Chernozhukov et al.(2013)]{chernozhukov2013inference} Chernozhukov, V., Fern{\'a}ndez-Val, I., \& Melly, B. (2013). Inference on counterfactual distributions. \textit{Econometrica}, 81(6), 2205-2268.
+\bibitem[Chernozhukov et al.(2018)]{chernozhukov2018debiased} Chernozhukov, V., Chetverikov, D., Demirer, M., Duflo, E., Hansen, C., Newey, W., \& Robins, J. (2018). Double/debiased machine learning for treatment and structural parameters. \textit{The Econometrics Journal}, 21(1), C1-C68.
+\bibitem[Doksum(1974)]{doksum1974empirical} Doksum, K. (1974). Empirical probability plots and statistical inference for nonlinear models in the two-sample case. \textit{The annals of statistics}, 267-277.
+\bibitem[Firpo(2007)]{firpo2007efficient} Firpo, S. (2007). Efficient semiparametric estimation of quantile treatment effects. \textit{Econometrica}, 75(1), 259-276.
+\bibitem[Hoagland(2020)]{hoagland2020who} Hoagland, A. (2020). \textit{Who Do Innovations Reach? The Influence of Trainings on Mental Health Treatments}. Working Paper.
+\bibitem[Imbens \& Angrist(1994)]{imbens1994} Imbens, G. W., \& Angrist, J. D. (1994). Identification and estimation of local average treatment effects. \textit{Econometrica}, 62(2), 467-475.
+\bibitem[Imbens \& Rubin(1997)]{imbens1997estimating} Imbens, G. W., \& Rubin, D. B. (1997). Estimating outcome distributions for compliers in instrumental variables models. \textit{The Review of Economic Studies}, 64(4), 555-574.
+\bibitem[Kallus \& Oprescu(2023)]{kallus2023robust} Kallus, N., \& Oprescu, M. (2023). Robust and agnostic learning of conditional distributional treatment effects. In \textit{International Conference on Artificial Intelligence and Statistics} (pp. 6037-6060). PMLR.
+\bibitem[Koenker et al.(2017)]{koenker2017handbook} Koenker, R., Chernozhukov, V., He, X., \& Peng, L. (2017). \textit{Handbook of quantile regression}. CRC press.
+\bibitem[Koenker(2005)]{koenker2005quantile} Koenker, R. (2005). \textit{Quantile regression} (Vol. 38). Cambridge university press.
+\bibitem[Kratsios \& Furuya(2025)]{kratsios2025kolmogorov} Kratsios, A., \& Furuya, T. (2025). Kolmogorov-Arnold Networks: Approximation and Learning Guarantees for Functions and their Derivatives. \textit{arXiv preprint arXiv:2504.15110}.
+\bibitem[Lehmann \& D'Abrera(1975)]{lehmann1975nonparametrics} Lehmann, E. L., \& D'Abrera, H. J. (1975). \textit{Nonparametrics: statistical methods based on ranks}. Holden-day.
+\bibitem[Liu et al.(2024)]{liu2024kan} Liu, Z., Wang, Y., Vaidya, S., Ruehle, F., Halverson, J., Solja{\v{c}}i{\'c}, M., ... \& Tegmark, M. (2024). Kan: Kolmogorov-arnold networks. \textit{arXiv preprint arXiv:2404.19756}.
+\bibitem[Mehendale et al.(2025)]{mehendale2025kanite} Mehendale, E., Thorat, A., Kolla, R., \& Pedanekar, N. (2025). KANITE: Kolmogorov-Arnold Networks for ITE estimation. \textit{arXiv preprint arXiv:2503.13912}.
+\bibitem[Newey(1994)]{newey1994asymptotic} Newey, W. K. (1994). The asymptotic variance of semiparametric estimators. \textit{Econometrica: Journal of the Econometric Society}, 1349-1382.
+\bibitem[Newey(1997)]{newey1997convergence} Newey, W. K. (1997). Convergence rates and asymptotic normality for series estimators. \textit{Journal of Econometrics}, 79(1), 147-168. % Placeholder - please verify
+\bibitem[Peng et al.(2022)]{peng2022rates} Peng, W., Coleman, T. and Mentch, L. (2022). Rates of convergence for random forests via generalised U-statistics. \textit{Electronic Journal of Statistics}, 16(1), pp.232-292. % Placeholder - please verify
+
+\bibitem[Wager and Athey(2015)]{wager2015adaptive} Wager, S., \& Athey, S. (2015). Adaptive Causal Inference. \textit{arXiv preprint arXiv:1503.02300}. % Placeholder for actual publication if available, e.g., PNAS. Please verify.
+
+
+\end{thebibliography}
+
+\end{document}

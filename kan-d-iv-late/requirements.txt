@@ -3,6 +3,7 @@ pandas
 scikit-learn
 matplotlib
 torch
-pykan
+git+https://github.com/shawcharles/efficient-kan.git
+pytest
 PyYAML
 tqdm

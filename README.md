@@ -1,80 +1,77 @@
 # KAN-D-IV-LATE
 
-Research code and supplementary materials for the paper  
-**“Rethinking Distributional IVs: KAN-Powered D-IV-LATE & Model Choice”**  
-([arXiv:2506.12765](https://arxiv.org/abs/2506.12765)).
+Research code and manuscript materials for the paper  
+**“Rethinking Distributional IVs: KAN-Powered D-IV-LATE & Model Choice.”**
 
-## Project Overview
-This repository implements two double/debiased-machine-learning estimators for the Distributional Instrumental-Variable Local Average Treatment Effect (D-IV-LATE):
+## Current Status
 
-1. **RF-D-IV-LATE** – baseline estimator that uses Random Forests for all nuisance functions.
-2. **KAN-D-IV-LATE** – novel estimator that replaces the Random Forests with Kolmogorov-Arnold Networks (KANs).
+This repository has been rationalised into one reviewer-usable path.
 
-The codebase reproduces the Monte-Carlo simulation study and the empirical application to the 401(k) pension data reported in the paper.
+- The active research code path is [`kan-d-iv-late/`](./kan-d-iv-late).
+- Historical duplicate trees live under `legacy/` and are not the canonical execution path.
+- Publication planning and execution state live under [`.planning/`](./.planning).
 
-## Directory Structure
+## Active Layout
+
 ```text
-kan-d-iv-late-main/
-├── kan-d-iv-late/
-│   ├── code/
-│   │   ├── kan-d-iv-late_simulation.py          # Monte-Carlo study
-│   │   └── kan-d-iv-late_empirical_application.py
-│   └── requirements.txt
-├── KAN-D-IV-LATE/data/pension.csv               # 401(k) data
-├── paper/main.tex                               # TeX source of the article
-└── README.md
+.
+├── kan-d-iv-late/          # Active code, data, and results path
+├── .planning/              # GSD-style publication planning workspace
+├── main.tex                # Paper draft
+├── preamble.tex
+└── legacy/                 # Archived duplicate project trees (after rationalisation)
 ```
 
-## Getting Started
+## Why The Repo Is Being Reorganised
 
-### 1. Clone and install dependencies
+The repo historically accumulated multiple overlapping project bundles, including:
+
+- a baseline D-IV-LATE tree
+- a KAN-focused tree
+- a `kan-d-iv-late-main/` bundle containing further duplicates and notebook work
+
+That duplication made it hard to know which scripts, data, and outputs are authoritative. The cleanup has established one canonical implementation path so publication-focused experiments can proceed from a single codebase.
+
+## Canonical Setup
+
+Use one environment path for the active tree:
+
 ```bash
-git clone https://github.com/<username>/kan-d-iv-late.git
-cd kan-d-iv-late-main
 python -m venv .venv
 source .venv/bin/activate
 pip install -r kan-d-iv-late/requirements.txt
-# If you want the bleeding-edge KAN implementation:
-pip install efficient-kan   # optional; used by the simulation script
 ```
 
-### 2. Monte-Carlo Simulation
+The active KAN backend is `efficient-kan`, installed via `kan-d-iv-late/requirements.txt`.
+
+## Canonical Commands
+
+Empirical pipeline:
+
 ```bash
-python kan-d-iv-late/code/kan-d-iv-late_simulation.py
+python kan-d-iv-late/run_empirical.py
 ```
-Outputs → `simulation_results.csv` (and a ZIP archive if running in Google Colab).
 
-### 3. Empirical Application
-Ensure the pension dataset is present at `KAN-D-IV-LATE/data/pension.csv` (already supplied).
+Simulation pipeline:
+
 ```bash
-python kan-d-iv-late/code/kan-d-iv-late_empirical_application.py
+python kan-d-iv-late/run_simulation.py
 ```
-Outputs →
-* `KAN-D-IV-LATE/results/empirical_kan-d-iv-late_results.csv` – pointwise D-IV-LATE estimates  
-* `KAN-D-IV-LATE/results/empirical_kan-d-iv-late_plot.png` – publication-ready plot of the D-IV-LATE curve
 
-## Reproducing Paper Figures
-Running the two scripts above will save all the tables and figures used in the manuscript to `KAN-D-IV-LATE/results/`.  
-You can re-compile the paper with:
+Quick simulation smoke run:
+
 ```bash
-cd paper
-latexmk -pdf main.tex
+python kan-d-iv-late/run_simulation.py --quick
 ```
 
-## Citation
-If you use this code, please cite
-```bibtex
-@article{Shaw2025KANDIVLATE,
-  title   = {Rethinking Distributional IV: KAN-Powered D-IV-LATE & Model Choice},
-  author  = {Charles Shaw},
-  journal = {arXiv preprint arXiv:2506.12765},
-  year    = {2025}
-}
+Versioned simulation artifacts are written under `kan-d-iv-late/results/simulation_runs/`.
+
+Current test gate:
+
+```bash
+pytest -q
 ```
 
-## License
-Apache 2.0 — see [`LICENSE`](LICENSE) for details.
+## Current Caveat
 
-## Contact
-Questions or suggestions? Open an issue or email <charles@fixedpoint.io>.
-
+The active code path is now canonical through Phase 2 execution. The remaining publication risks are the missing experiment matrix, empirical robustness work, inference validation, and manuscript revision.
