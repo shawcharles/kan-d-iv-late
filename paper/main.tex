@@ -249,6 +249,8 @@ The variance formula used in the code is the sample analogue of the influence re
 
 One practical consequence is immediate. The corrected estimator in Equations \ref{eq:psi_beta}--\ref{eq:moment_condition_ratio} is not numerically equivalent to the residualized score used in the earlier draft. The main simulation, ablation, empirical-core, and inference tables reported below have therefore been regenerated under the corrected estimator. Results from the earlier residualized-score code path, including older robustness artifacts, are not used as final evidence in this draft.
 
+The paper-facing numerical artifacts are anchored to the corrected evidence root \path{kan-d-iv-late/results/corrected_2026_06_06}. Within that root, the simulation benchmark is backed by the full width-64 profile manifest, the empirical results by the core empirical manifest, and the inference results by the full inference manifest. These manifests record the command, package versions, repository commits, and output files used for the tables below.
+
 \section{Statistical Inference and Uncertainty Quantification}
 \label{sec:inference}
 

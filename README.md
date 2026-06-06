@@ -7,9 +7,12 @@ Research code and manuscript materials for the paper
 
 This repository has been rationalised into one reviewer-usable path.
 
+- The importable package is [`kan_d_iv_late/`](./kan_d_iv_late).
 - The active research code path is [`kan-d-iv-late/`](./kan-d-iv-late).
 - Historical duplicate trees live under `legacy/` and are not the canonical execution path.
 - Publication planning and execution state live under [`.planning/`](./.planning).
+- Corrected paper-facing evidence is stored under
+  `kan-d-iv-late/results/corrected_2026_06_06/`.
 
 ## Active Layout
 
@@ -67,7 +70,9 @@ Quick simulation smoke run:
 python kan-d-iv-late/run_simulation.py --quick
 ```
 
-Versioned simulation artifacts are written under `kan-d-iv-late/results/simulation_runs/`.
+Versioned simulation artifacts are written under `kan-d-iv-late/results/simulation_runs/`
+by default. The corrected paper-facing Phase 5 rerun is under
+`kan-d-iv-late/results/corrected_2026_06_06/`.
 
 Current test gate:
 
@@ -82,6 +87,9 @@ The importable package is now the active implementation surface. The
 location. The main numerical evidence has been regenerated under the corrected
 score path; outstanding publication work is now robustness/calibration and
 final submission polish, not another score correction.
+
+Do not rerun the full evidence suite casually. The corrected Phase 5 run took
+approximately 12 hours, and future evidence refreshes should be deliberate.
 
 ## Local Validation
 
