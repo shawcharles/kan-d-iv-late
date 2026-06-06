@@ -96,6 +96,38 @@ KAN_ABLATION_CONFIG_LIBRARY = (
     {"label": "kan_grid3_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=3, reg_strength=1e-4)},
     {"label": "kan_grid6_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=6, reg_strength=1e-4)},
 )
+KAN_CONFIG_LABELS = tuple(item["label"] for item in KAN_ABLATION_CONFIG_LIBRARY)
+
+
+def build_labeled_kan_config(label):
+    for item in KAN_ABLATION_CONFIG_LIBRARY:
+        if item["label"] == label:
+            config = dict(item["params"])
+            return {
+                "kan_config_label": label,
+                "kan_config": config,
+                "kan_config_id": build_kan_config_id(config),
+                "kan_steps": config["steps"],
+            }
+    raise ValueError(f"Unsupported KAN config label: {label}")
+
+
+def apply_kan_config_label(scenarios, kan_config_label):
+    if kan_config_label is None:
+        return scenarios
+
+    config_record = build_labeled_kan_config(kan_config_label)
+    return [
+        {
+            **scenario,
+            **config_record,
+        }
+        for scenario in scenarios
+    ]
+
+
+def scenario_kan_config(scenario):
+    return build_kan_config(**scenario.get("kan_config", {"steps": scenario["kan_steps"]}))
 
 
 def load_simulation_module():
@@ -683,13 +715,16 @@ def run_profile(
     resume=False,
     scenario_offset=0,
     scenario_count=None,
+    kan_config_label=None,
 ):
     simulation_module = simulation_module or load_simulation_module()
     results_dir = Path(results_dir)
     profile_dir = results_dir / profile_name
+    if kan_config_label is not None:
+        profile_dir = profile_dir / kan_config_label
     profile_dir.mkdir(parents=True, exist_ok=True)
 
-    scenarios = build_profile_scenarios(profile_name)
+    scenarios = apply_kan_config_label(build_profile_scenarios(profile_name), kan_config_label)
     selected_scenarios = select_scenarios(
         scenarios,
         scenario_offset=scenario_offset,
@@ -700,11 +735,13 @@ def run_profile(
         manifest = _load_json(manifest_path)
         manifest["profile_name"] = profile_name
         manifest["scenario_count"] = len(scenarios)
+        manifest["kan_config_label"] = kan_config_label
         manifest["provenance"] = collect_run_provenance()
     else:
         manifest = {
             "profile_name": profile_name,
             "scenario_count": len(scenarios),
+            "kan_config_label": kan_config_label,
             "scenarios": [],
             "provenance": collect_run_provenance(),
         }
@@ -732,6 +769,7 @@ def run_profile(
                 print(f"Resuming from existing scenario artifacts: {scenario_record['scenario_label']}")
 
         if scenario_record is None:
+            kan_config = scenario_kan_config(scenario)
             scenario_outputs = simulation_module.main(
                 results_dir=scenario_dir,
                 n_simulations=scenario["n_simulations"],
@@ -740,7 +778,15 @@ def run_profile(
                 instrument_strength=scenario["instrument_strength"],
                 y_points=scenario["y_points"],
                 k_folds=scenario["k_folds"],
-                kan_steps=scenario["kan_steps"],
+                kan_steps=kan_config["steps"],
+                kan_hidden_dim=kan_config["hidden_dim"],
+                kan_grid_size=kan_config["grid_size"],
+                kan_spline_order=kan_config["spline_order"],
+                kan_lr=kan_config["lr"],
+                kan_weight_decay=kan_config["weight_decay"],
+                kan_reg_strength=kan_config["reg_strength"],
+                kan_min_class_count=kan_config["min_class_count"],
+                probability_epsilon=kan_config["probability_epsilon"],
                 truth_sample_size=scenario["truth_sample_size"],
                 truth_seed=scenario["truth_seed"],
                 seed_base=seed_base,
@@ -770,6 +816,7 @@ def run_profile(
         manifest["last_selection"] = {
             "scenario_offset": scenario_offset,
             "scenario_count": scenario_count,
+            "kan_config_label": kan_config_label,
             "selected_scenario_labels": [scenario_label(item) for item in selected_scenarios],
         }
         _write_json(manifest_path, manifest)
@@ -955,11 +1002,20 @@ def build_parser():
     )
     parser.add_argument("--scenario-offset", type=int, default=0)
     parser.add_argument("--scenario-count", type=int)
+    parser.add_argument(
+        "--kan-config-label",
+        choices=KAN_CONFIG_LABELS,
+        help="Run a non-ablation profile with one of the named KAN policy configs.",
+    )
     return parser
 
 
 def main():
-    args = build_parser().parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
+    if args.ablation and args.kan_config_label is not None:
+        parser.error("--kan-config-label is only supported for non-ablation profile runs")
+
     if args.list:
         if args.ablation == "kan":
             print(render_kan_ablation_listing(args.profile))
@@ -983,6 +1039,7 @@ def main():
             resume=args.resume,
             scenario_offset=args.scenario_offset,
             scenario_count=args.scenario_count,
+            kan_config_label=args.kan_config_label,
         )
         print(f"Profile '{args.profile}' completed.")
     print(f"Manifest written to {outputs['manifest_path']}")

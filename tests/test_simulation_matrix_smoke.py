@@ -129,6 +129,45 @@ def test_matrix_runner_resume_skips_completed_scenarios(tmp_path, monkeypatch):
     assert manifest["provenance"]["marker"] == "refreshed-profile-provenance"
 
 
+def test_matrix_runner_profile_accepts_labeled_kan_config(tmp_path, monkeypatch):
+    simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_labeled_kan")
+    runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_labeled_kan")
+    seen_hidden_dims = set()
+
+    def fake_predict(train_features, train_labels, test_features, **kwargs):
+        seen_hidden_dims.add(kwargs["hidden_dim"])
+        baseline = 0.5 if len(train_labels) == 0 else float(np.mean(train_labels))
+        return np.full(len(test_features), baseline, dtype=float)
+
+    monkeypatch.setattr(simulation, "fit_binary_kan_predict", fake_predict)
+
+    outputs = runner.run_profile(
+        profile_name="smoke",
+        results_dir=tmp_path,
+        simulation_module=simulation,
+        scenario_count=1,
+        kan_config_label="kan_width64_v1",
+    )
+
+    assert outputs["profile_dir"] == tmp_path / "smoke" / "kan_width64_v1"
+    assert seen_hidden_dims == {64}
+
+    manifest = json.loads(outputs["manifest_path"].read_text(encoding="utf-8"))
+    assert manifest["kan_config_label"] == "kan_width64_v1"
+    assert manifest["completed_scenario_count"] == 1
+    assert manifest["scenarios"][0]["kan_config_label"] == "kan_width64_v1"
+    assert manifest["scenarios"][0]["kan_config_id"] == "kan_hd64_gs4_sp3_st25_lr1e-03_wd1e-04_reg1e-04"
+
+    scenario_summary = np.genfromtxt(
+        outputs["aggregate_files"]["profile_scenario_summary"],
+        delimiter=",",
+        names=True,
+        dtype=None,
+        encoding="utf-8",
+    )
+    assert set(np.atleast_1d(scenario_summary["kan_hidden_dim"])) == {64}
+
+
 def test_matrix_runner_kan_ablation_smoke_writes_aggregate_artifacts(tmp_path, monkeypatch):
     simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_ablation")
     runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_ablation")
