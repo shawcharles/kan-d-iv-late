@@ -1,21 +1,8 @@
-import importlib.util
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-CODE_DIR = ROOT / "kan-d-iv-late" / "code"
-
-
-def load_score_module():
-    path = CODE_DIR / "dlate_score.py"
-    spec = importlib.util.spec_from_file_location("dlate_score_validation", path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+from kan_d_iv_late import dlate_score as score
 
 
 def sample_data():
@@ -39,7 +26,6 @@ def sample_nuisance():
 
 
 def test_score_validation_accepts_boundary_probabilities_before_clipping():
-    score = load_score_module()
     results = score.compute_dlate_score_objects(
         sample_data(),
         sample_nuisance(),
@@ -51,7 +37,6 @@ def test_score_validation_accepts_boundary_probabilities_before_clipping():
 
 
 def test_score_validation_requires_data_columns():
-    score = load_score_module()
     data = sample_data().drop(columns=["W"])
 
     with pytest.raises(KeyError, match="Missing required data columns"):
@@ -59,7 +44,6 @@ def test_score_validation_requires_data_columns():
 
 
 def test_score_validation_rejects_nonfinite_data_values():
-    score = load_score_module()
     data = sample_data()
     data.loc[0, "Y"] = np.nan
 
@@ -76,16 +60,12 @@ def test_score_validation_rejects_nonfinite_data_values():
     ],
 )
 def test_score_validation_rejects_malformed_y_grid(bad_y_grid):
-    score = load_score_module()
-
     with pytest.raises(ValueError, match="y_grid"):
         score.compute_dlate_score_objects(sample_data(), sample_nuisance(), bad_y_grid)
 
 
 @pytest.mark.parametrize("bad_epsilon", [0.0, -1e-6, 0.5, np.nan, np.array([1e-6, 1e-5])])
 def test_score_validation_rejects_malformed_epsilon(bad_epsilon):
-    score = load_score_module()
-
     with pytest.raises(ValueError, match="epsilon"):
         score.compute_dlate_score_objects(
             sample_data(),
@@ -96,7 +76,6 @@ def test_score_validation_rejects_malformed_epsilon(bad_epsilon):
 
 
 def test_score_validation_rejects_vector_nuisance_shape_mismatch():
-    score = load_score_module()
     nuisance = sample_nuisance()
     nuisance["pi_hat"] = np.array([[0.5], [0.5], [0.5], [0.5]])
 
@@ -105,7 +84,6 @@ def test_score_validation_rejects_vector_nuisance_shape_mismatch():
 
 
 def test_score_validation_rejects_matrix_nuisance_shape_mismatch():
-    score = load_score_module()
     nuisance = sample_nuisance()
     nuisance["mu_hat_0"] = np.array([0.2, 0.2, 0.3, 0.3])
 
@@ -114,7 +92,6 @@ def test_score_validation_rejects_matrix_nuisance_shape_mismatch():
 
 
 def test_score_validation_rejects_nonfinite_nuisance_values():
-    score = load_score_module()
     nuisance = sample_nuisance()
     nuisance["p_hat_1"] = np.array([0.8, np.inf, 0.8, 0.8])
 

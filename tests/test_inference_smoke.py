@@ -8,17 +8,19 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from kan_test_helpers import ensure_stub_efficient_kan
 from provenance_assertions import assert_manifest_provenance
 
+ensure_stub_efficient_kan()
+
+from kan_d_iv_late import dlate_inference as inference
+
 ROOT = Path(__file__).resolve().parents[1]
-CODE_DIR = ROOT / "kan-d-iv-late" / "code"
+PROJECT_DIR = ROOT / "kan-d-iv-late"
 
 
-def load_module(filename, module_name):
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
-
-    path = CODE_DIR / filename
+def load_runner(filename, module_name):
+    path = PROJECT_DIR / filename
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -47,7 +49,6 @@ def sample_nuisance():
 
 
 def test_asymptotic_inference_returns_expected_shapes():
-    inference = load_module("dlate_inference.py", "dlate_inference_asymptotic")
     results = inference.dlate_asymptotic_inference(
         sample_data(),
         sample_nuisance(),
@@ -61,8 +62,6 @@ def test_asymptotic_inference_returns_expected_shapes():
 
 
 def test_bootstrap_inference_returns_expected_shapes():
-    inference = load_module("dlate_inference.py", "dlate_inference_bootstrap")
-
     def nuisance_estimator(data, y_grid):
         return sample_nuisance()
 
@@ -82,7 +81,6 @@ def test_bootstrap_inference_returns_expected_shapes():
 
 
 def test_bootstrap_inference_uses_supplied_original_point_estimates():
-    inference = load_module("dlate_inference.py", "dlate_inference_bootstrap_supplied")
     supplied_point_estimates = np.array([123.0])
 
     def nuisance_estimator(data, y_grid):
@@ -102,7 +100,6 @@ def test_bootstrap_inference_uses_supplied_original_point_estimates():
 
 
 def test_bootstrap_inference_computes_original_point_estimates_once_when_omitted():
-    inference = load_module("dlate_inference.py", "dlate_inference_bootstrap_original")
     calls = []
 
     def nuisance_estimator(data, y_grid):
@@ -127,8 +124,6 @@ def test_bootstrap_inference_computes_original_point_estimates_once_when_omitted
 
 
 def test_bootstrap_inference_rejects_supplied_point_estimate_shape_mismatch():
-    inference = load_module("dlate_inference.py", "dlate_inference_bootstrap_bad_point")
-
     def nuisance_estimator(data, y_grid):
         return sample_nuisance()
 
@@ -143,8 +138,6 @@ def test_bootstrap_inference_rejects_supplied_point_estimate_shape_mismatch():
 
 
 def test_bootstrap_inference_rejects_malformed_grid_with_supplied_point_estimates():
-    inference = load_module("dlate_inference.py", "dlate_inference_bootstrap_bad_grid")
-
     def nuisance_estimator(data, y_grid):
         return sample_nuisance()
 
@@ -165,7 +158,7 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
         seen_kan_steps.append(kwargs["kan_steps"])
         return sample_nuisance()
 
-    runner = load_module("../run_inference_validation.py", "run_inference_validation_smoke")
+    runner = load_runner("run_inference_validation.py", "run_inference_validation_smoke")
 
     fake_simulation = types.SimpleNamespace(
         PROBABILITY_EPSILON=1e-6,
@@ -248,7 +241,7 @@ def test_inference_runner_accepts_labeled_kan_config(tmp_path):
         seen_kan_configs.append(kwargs["kan_config"])
         return sample_nuisance()
 
-    runner = load_module("../run_inference_validation.py", "run_inference_validation_labeled_config")
+    runner = load_runner("run_inference_validation.py", "run_inference_validation_labeled_config")
 
     fake_simulation = types.SimpleNamespace(
         PROBABILITY_EPSILON=1e-6,

@@ -1,45 +1,21 @@
 import importlib.util
 import json
-import sys
-import types
 from pathlib import Path
 
 import numpy as np
-import torch
 
+from kan_test_helpers import ensure_stub_efficient_kan
 from provenance_assertions import assert_manifest_provenance
+
+ensure_stub_efficient_kan()
+
+from kan_d_iv_late import simulation
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT_DIR = ROOT / "kan-d-iv-late"
-CODE_DIR = PROJECT_DIR / "code"
-
-
-def ensure_stub_efficient_kan():
-    if "efficient_kan" in sys.modules:
-        return
-
-    module = types.ModuleType("efficient_kan")
-
-    class DummyKAN(torch.nn.Module):
-        def __init__(self, layers_hidden, **kwargs):
-            super().__init__()
-            self.linear = torch.nn.Linear(layers_hidden[0], layers_hidden[-1])
-
-        def forward(self, x):
-            return self.linear(x)
-
-        def regularization_loss(self, *args, **kwargs):
-            return torch.tensor(0.0)
-
-    module.KAN = DummyKAN
-    sys.modules["efficient_kan"] = module
 
 
 def load_module(path, module_name):
-    ensure_stub_efficient_kan()
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
-
     spec = importlib.util.spec_from_file_location(module_name, path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -58,7 +34,6 @@ def test_full_profile_enumerates_crossed_phase3_matrix():
 
 
 def test_matrix_runner_smoke_profile_writes_scenario_artifacts(tmp_path, monkeypatch):
-    simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_smoke")
     runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_smoke")
 
     def fake_predict(train_features, train_labels, test_features, **kwargs):
@@ -95,7 +70,6 @@ def test_matrix_runner_smoke_profile_writes_scenario_artifacts(tmp_path, monkeyp
 
 
 def test_matrix_runner_resume_skips_completed_scenarios(tmp_path, monkeypatch):
-    simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_resume")
     runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_resume")
 
     def fake_predict(train_features, train_labels, test_features, **kwargs):
@@ -130,7 +104,6 @@ def test_matrix_runner_resume_skips_completed_scenarios(tmp_path, monkeypatch):
 
 
 def test_matrix_runner_profile_accepts_labeled_kan_config(tmp_path, monkeypatch):
-    simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_labeled_kan")
     runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_labeled_kan")
     seen_hidden_dims = set()
 
@@ -169,7 +142,6 @@ def test_matrix_runner_profile_accepts_labeled_kan_config(tmp_path, monkeypatch)
 
 
 def test_matrix_runner_kan_ablation_smoke_writes_aggregate_artifacts(tmp_path, monkeypatch):
-    simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_ablation")
     runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_ablation")
 
     def fake_predict(train_features, train_labels, test_features, **kwargs):
@@ -193,7 +165,6 @@ def test_matrix_runner_kan_ablation_smoke_writes_aggregate_artifacts(tmp_path, m
 
 
 def test_matrix_runner_kan_ablation_resume_skips_completed_step_variants(tmp_path, monkeypatch):
-    simulation = load_module(CODE_DIR / "kan-d-iv-late_simulation.py", "simulation_matrix_ablation_resume")
     runner = load_module(PROJECT_DIR / "run_simulation_matrix.py", "simulation_matrix_runner_ablation_resume")
 
     def fake_predict(train_features, train_labels, test_features, **kwargs):

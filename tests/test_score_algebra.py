@@ -1,53 +1,15 @@
-import importlib.util
-import sys
-import types
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
-import torch
 
-ROOT = Path(__file__).resolve().parents[1]
-CODE_DIR = ROOT / "kan-d-iv-late" / "code"
+from kan_test_helpers import ensure_stub_efficient_kan
 
+ensure_stub_efficient_kan()
 
-def ensure_stub_efficient_kan():
-    if "efficient_kan" in sys.modules:
-        return
-
-    module = types.ModuleType("efficient_kan")
-
-    class DummyKAN(torch.nn.Module):
-        def __init__(self, layers_hidden, **kwargs):
-            super().__init__()
-            self.linear = torch.nn.Linear(layers_hidden[0], layers_hidden[-1])
-
-        def forward(self, x):
-            return self.linear(x)
-
-        def regularization_loss(self, *args, **kwargs):
-            return torch.tensor(0.0)
-
-    module.KAN = DummyKAN
-    sys.modules["efficient_kan"] = module
-
-
-def load_module(filename, module_name):
-    ensure_stub_efficient_kan()
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
-
-    path = CODE_DIR / filename
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+from kan_d_iv_late import dlate_score as score_module
+from kan_d_iv_late import empirical
 
 
 def test_dlate_estimator_matches_manual_score_formula():
-    empirical = load_module("kan-d-iv-late_empirical_application.py", "empirical_score_test")
-
     data = pd.DataFrame(
         {
             "Z": [0, 1],
@@ -69,8 +31,6 @@ def test_dlate_estimator_matches_manual_score_formula():
 
 
 def test_dlate_estimator_returns_nan_when_denominator_collapses():
-    empirical = load_module("kan-d-iv-late_empirical_application.py", "empirical_nan_test")
-
     data = pd.DataFrame(
         {
             "Z": [0, 1],
@@ -91,7 +51,6 @@ def test_dlate_estimator_returns_nan_when_denominator_collapses():
 
 
 def test_level_scores_recover_population_targets_under_exact_nuisances():
-    score_module = load_module("dlate_score.py", "dlate_score_population_test")
     rng = np.random.default_rng(123)
     n_obs = 200000
 

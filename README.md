@@ -82,3 +82,15 @@ The importable package is now the active implementation surface. The
 location. The main numerical evidence has been regenerated under the corrected
 score path; outstanding publication work is now robustness/calibration and
 final submission polish, not another score correction.
+
+## Local Validation
+
+This project intentionally does not use CI/CD. Run the local validation gate
+before committing implementation changes:
+
+```bash
+scripts/validate.sh
+```
+
+The gate compiles Python sources, runs the test suite, and checks whitespace. It
+does not run expensive simulation or empirical evidence jobs.

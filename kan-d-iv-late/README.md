@@ -8,6 +8,9 @@ The active implementation now lives in the importable package at
 scripts in this directory are thin execution entrypoints retained for stable
 research commands and artifact paths.
 
+The files under `code/` are compatibility shims for older dynamic-import users.
+They should not receive new implementation logic.
+
 ## Commands
 
 Run from the repository root after installing with `requirements-local.txt`:
