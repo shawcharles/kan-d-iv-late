@@ -13,6 +13,11 @@ PROJECT_DIR = Path(__file__).resolve().parent
 CODE_DIR = PROJECT_DIR / "code"
 SCRIPT_PATH = CODE_DIR / "kan-d-iv-late_simulation.py"
 DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "simulation_runs" / "matrix"
+if str(CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(CODE_DIR))
+
+from provenance import collect_run_provenance
+
 
 DESIGN_NAMES = ("smooth_low", "baseline", "complex_local")
 INSTRUMENT_STRENGTH_NAMES = ("weak", "medium", "strong")
@@ -695,11 +700,13 @@ def run_profile(
         manifest = _load_json(manifest_path)
         manifest["profile_name"] = profile_name
         manifest["scenario_count"] = len(scenarios)
+        manifest["provenance"] = collect_run_provenance()
     else:
         manifest = {
             "profile_name": profile_name,
             "scenario_count": len(scenarios),
             "scenarios": [],
+            "provenance": collect_run_provenance(),
         }
     scenario_dirs = []
     scenario_records_by_label = {
@@ -816,12 +823,14 @@ def run_kan_ablation(
         manifest["profile_name"] = profile_name
         manifest["scenario_count"] = len(scenarios)
         manifest["kan_config_count"] = len(configs)
+        manifest["provenance"] = collect_run_provenance()
     else:
         manifest = {
             "profile_name": profile_name,
             "scenario_count": len(scenarios),
             "kan_config_count": len(configs),
             "ablation_runs": [],
+            "provenance": collect_run_provenance(),
         }
 
     run_records_by_key = {

@@ -14,6 +14,11 @@ CODE_DIR = PROJECT_DIR / "code"
 SIMULATION_SCRIPT = CODE_DIR / "kan-d-iv-late_simulation.py"
 INFERENCE_SCRIPT = CODE_DIR / "dlate_inference.py"
 DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "inference_runs"
+if str(CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(CODE_DIR))
+
+from provenance import collect_run_provenance
+
 DEFAULT_TRUTH_SEED = 1729
 DEFAULT_SEED_BASE = 20260420
 POINTWISE_COLUMNS = [
@@ -212,6 +217,7 @@ def _write_outputs(
             "pointwise_results": str(pointwise_path),
             "summary": str(summary_path),
         },
+        "provenance": collect_run_provenance(),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
     return {

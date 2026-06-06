@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -6,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+
+from provenance_assertions import assert_manifest_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 CODE_DIR = ROOT / "kan-d-iv-late" / "code"
@@ -74,6 +77,9 @@ def test_simulation_main_writes_expected_artifacts(tmp_path, monkeypatch):
     assert truth_files
     assert diagnostics_files
     assert summary_files
+
+    manifest = json.loads(manifest_files[0].read_text(encoding="utf-8"))
+    assert_manifest_provenance(manifest)
 
     results = pd.read_csv(results_csv)
     assert list(results.columns) == ["y", "kan_avg_bias", "kan_rmse", "rf_avg_bias", "rf_rmse"]

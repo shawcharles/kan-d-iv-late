@@ -28,6 +28,7 @@ from kan_utils import (
     fit_binary_kan_predict,
     fit_binary_rf_predict,
 )
+from provenance import collect_run_provenance
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
@@ -1077,6 +1078,7 @@ def main(
         "rf_config": core_config_metadata["rf_config"],
         "kan_config": core_config_metadata["kan_config"],
         "truth_meta": truth_bundle["meta"],
+        "provenance": collect_run_provenance(),
     }
 
     output_paths = write_benchmark_outputs(

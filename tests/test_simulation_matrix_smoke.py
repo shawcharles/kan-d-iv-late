@@ -7,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from provenance_assertions import assert_manifest_provenance
+
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT_DIR = ROOT / "kan-d-iv-late"
 CODE_DIR = PROJECT_DIR / "code"
@@ -76,6 +78,7 @@ def test_matrix_runner_smoke_profile_writes_scenario_artifacts(tmp_path, monkeyp
     assert manifest["profile_name"] == "smoke"
     assert manifest["scenario_count"] == len(outputs["scenario_dirs"])
     assert "aggregate_files" in manifest
+    assert_manifest_provenance(manifest)
 
     for scenario_dir in outputs["scenario_dirs"]:
         assert (scenario_dir / "simulation_results.csv").exists()
@@ -106,6 +109,11 @@ def test_matrix_runner_resume_skips_completed_scenarios(tmp_path, monkeypatch):
         raise AssertionError("simulation.main should not be called when resuming completed scenarios")
 
     monkeypatch.setattr(simulation, "main", fail_if_called)
+    monkeypatch.setattr(
+        runner,
+        "collect_run_provenance",
+        lambda: {"marker": "refreshed-profile-provenance"},
+    )
     resumed_outputs = runner.run_profile(
         profile_name="smoke",
         results_dir=tmp_path,
@@ -118,6 +126,7 @@ def test_matrix_runner_resume_skips_completed_scenarios(tmp_path, monkeypatch):
 
     manifest = json.loads(resumed_outputs["manifest_path"].read_text(encoding="utf-8"))
     assert {scenario["status"] for scenario in manifest["scenarios"]} == {"resumed"}
+    assert manifest["provenance"]["marker"] == "refreshed-profile-provenance"
 
 
 def test_matrix_runner_kan_ablation_smoke_writes_aggregate_artifacts(tmp_path, monkeypatch):
@@ -138,6 +147,7 @@ def test_matrix_runner_kan_ablation_smoke_writes_aggregate_artifacts(tmp_path, m
     manifest = json.loads(outputs["manifest_path"].read_text(encoding="utf-8"))
     assert manifest["profile_name"] == "smoke"
     assert manifest["completed_run_count"] == 3
+    assert_manifest_provenance(manifest)
     assert Path(outputs["aggregate_files"]["kan_ablation_summary"]).exists()
     assert Path(outputs["aggregate_files"]["kan_ablation_model_comparison"]).exists()
     assert Path(outputs["aggregate_files"]["kan_ablation_lock_decision"]).exists()
@@ -162,6 +172,11 @@ def test_matrix_runner_kan_ablation_resume_skips_completed_step_variants(tmp_pat
         raise AssertionError("simulation.main should not be called when resuming completed KAN ablation runs")
 
     monkeypatch.setattr(simulation, "main", fail_if_called)
+    monkeypatch.setattr(
+        runner,
+        "collect_run_provenance",
+        lambda: {"marker": "refreshed-ablation-provenance"},
+    )
     resumed_outputs = runner.run_kan_ablation(
         profile_name="smoke",
         results_dir=tmp_path,
@@ -175,3 +190,4 @@ def test_matrix_runner_kan_ablation_resume_skips_completed_step_variants(tmp_pat
     manifest = json.loads(resumed_outputs["manifest_path"].read_text(encoding="utf-8"))
     assert manifest["completed_run_count"] == len(runner.build_kan_ablation_configs("smoke"))
     assert {run["status"] for run in manifest["ablation_runs"]} == {"resumed"}
+    assert manifest["provenance"]["marker"] == "refreshed-ablation-provenance"

@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from provenance_assertions import assert_manifest_provenance
+
 ROOT = Path(__file__).resolve().parents[1]
 CODE_DIR = ROOT / "kan-d-iv-late" / "code"
 
@@ -205,6 +207,7 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
 
     assert manifest["profile"] == "smoke"
     assert manifest["completed_replication_count"] == 2
+    assert_manifest_provenance(manifest)
     assert pointwise.shape[0] == 4
     assert set(summary["model"]) == {"kan", "rf"}
 

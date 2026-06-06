@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import types
 from pathlib import Path
@@ -6,6 +7,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+
+from provenance_assertions import assert_manifest_provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 CODE_DIR = ROOT / "kan-d-iv-late" / "code"
@@ -91,3 +94,57 @@ def test_empirical_model_comparison_builder_reports_gap_metrics():
     assert len(comparison) == 1
     assert comparison.loc[0, "spec_label"] == "core_raw_30"
     assert comparison.loc[0, "max_abs_gap"] == 0.5
+
+
+def test_empirical_runner_manifest_includes_provenance(tmp_path, monkeypatch):
+    wrapper = load_module(PROJECT_DIR / "run_empirical.py", "run_empirical_manifest")
+    fake_module = types.SimpleNamespace(
+        load_and_prepare_data=lambda csv_path: (
+            pd.DataFrame(
+                {
+                    "Z": np.tile([0, 1], 60),
+                    "W": np.tile([0, 1], 60),
+                    "Y": np.linspace(0.0, 1.0, 120),
+                    "X": np.linspace(1.0, 2.0, 120),
+                }
+            ),
+            ["X"],
+        ),
+        build_kan_config=lambda **kwargs: {"steps": kwargs.get("steps", 1)},
+        build_rf_config=lambda **kwargs: {"n_estimators": kwargs.get("n_estimators", 10)},
+    )
+
+    def fake_run_empirical_spec(module, raw_data, x_cols, spec):
+        curves = pd.DataFrame(
+            {
+                "spec_label": ["core_raw_30", "core_raw_30"],
+                "model": ["kan", "rf"],
+                "y_value": [0.0, 0.0],
+                "dlate_estimate": [0.1, 0.2],
+            }
+        )
+        diagnostics = pd.DataFrame({"spec_label": ["core_raw_30"], "model": ["kan"]})
+        balance = pd.DataFrame({"spec_label": ["core_raw_30"], "model": ["kan"]})
+        return {"curves": curves, "diagnostics": diagnostics, "balance": balance}
+
+    monkeypatch.setattr(wrapper, "load_module", lambda: fake_module)
+    monkeypatch.setattr(wrapper, "run_empirical_spec", fake_run_empirical_spec)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_empirical.py",
+            "--profile",
+            "core",
+            "--results-dir",
+            str(tmp_path),
+            "--data",
+            str(DATA_PATH),
+        ],
+    )
+
+    wrapper.main()
+
+    manifest_path = tmp_path / "core" / "empirical_manifest_core.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert_manifest_provenance(manifest)

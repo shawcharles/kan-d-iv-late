@@ -15,6 +15,11 @@ PROJECT_DIR = Path(__file__).resolve().parent
 CODE_DIR = PROJECT_DIR / "code"
 SCRIPT_PATH = CODE_DIR / "kan-d-iv-late_empirical_application.py"
 DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "empirical_runs"
+if str(CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(CODE_DIR))
+
+from provenance import collect_run_provenance
+
 
 
 def load_module():
@@ -420,6 +425,7 @@ def main():
             "empirical_model_comparison": str(comparison_path),
             **compatibility_assets,
         },
+        "provenance": collect_run_provenance(),
     }
     manifest_path = results_dir / f"empirical_manifest_{args.profile}.json"
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
