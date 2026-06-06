@@ -71,7 +71,7 @@ def _efficient_kan_source_path(repo_root):
 def collect_run_provenance(project_root=None):
     """Return manifest-safe provenance for generated numerical artifacts."""
     package_dir = Path(__file__).resolve().parent
-    repo_root = Path(project_root).resolve() if project_root is not None else package_dir.parent
+    repo_root = Path(project_root).resolve() if project_root is not None else package_dir.parents[1]
     efficient_kan_path = _efficient_kan_source_path(repo_root)
 
     repositories = {

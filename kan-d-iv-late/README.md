@@ -4,7 +4,7 @@ This directory contains the command-line wrappers, input data, and default
 artifact locations for the `kan_d_iv_late` Python package.
 
 The active implementation now lives in the importable package at
-`../kan_d_iv_late/`. Keep estimator and nuisance-learning changes there. The
+`../src/kan_d_iv_late/`. Keep estimator and nuisance-learning changes there. The
 scripts in this directory are thin execution entrypoints retained for stable
 research commands and artifact paths.
 

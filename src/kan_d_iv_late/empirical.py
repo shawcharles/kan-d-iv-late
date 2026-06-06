@@ -20,7 +20,7 @@ from .kan_utils import (
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
 PROJECT_DIR = REPO_ROOT / "kan-d-iv-late"
 DEFAULT_DATA_PATH = PROJECT_DIR / "data" / "pension.csv"
 DEFAULT_RESULTS_DIR = PROJECT_DIR / "results"

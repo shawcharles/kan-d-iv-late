@@ -31,7 +31,7 @@ from .kan_utils import (
 from .provenance import collect_run_provenance
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
 PROJECT_DIR = REPO_ROOT / "kan-d-iv-late"
 DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "simulation_runs"
 

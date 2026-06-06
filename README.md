@@ -7,7 +7,7 @@ Research code and manuscript materials for the paper
 
 This repository has been rationalised into one reviewer-usable path.
 
-- The importable package is [`kan_d_iv_late/`](./kan_d_iv_late).
+- The importable package is [`src/kan_d_iv_late/`](./src/kan_d_iv_late).
 - The active research code path is [`kan-d-iv-late/`](./kan-d-iv-late).
 - Historical duplicate trees live under `legacy/` and are not the canonical execution path.
 - Publication planning and execution state live under [`.planning/`](./.planning).
@@ -18,7 +18,7 @@ This repository has been rationalised into one reviewer-usable path.
 
 ```text
 .
-├── kan_d_iv_late/          # Importable Python package
+├── src/kan_d_iv_late/      # Importable Python package
 ├── kan-d-iv-late/          # CLI wrappers, data, and results path
 ├── .planning/              # GSD-style publication planning workspace
 ├── paper/                  # Paper draft and compiled PDF

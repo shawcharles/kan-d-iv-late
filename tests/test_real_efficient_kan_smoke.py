@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = ROOT / "src"
 SIBLING_EFFICIENT_KAN_SRC = Path("/home/user/Documents/GITHUB/shawcharles/efficient-kan/src")
 
 
@@ -16,7 +17,7 @@ def test_real_sibling_efficient_kan_supports_active_kan_utils():
     env = os.environ.copy()
     pythonpath_entries = [
         str(SIBLING_EFFICIENT_KAN_SRC),
-        str(ROOT),
+        str(SRC_ROOT),
         env.get("PYTHONPATH", ""),
     ]
     env["PYTHONPATH"] = os.pathsep.join(entry for entry in pythonpath_entries if entry)
