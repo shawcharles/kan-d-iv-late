@@ -306,6 +306,7 @@ def run_profile(
                     data,
                     y_grid,
                     nuisance_estimator,
+                    point_estimates=asymptotic["point_estimates"],
                     alpha=alpha,
                     n_bootstrap=profile["n_bootstrap"],
                     random_state=scenario_seed_base + 10000 + replication,
