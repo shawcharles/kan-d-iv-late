@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -14,6 +13,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from kan_d_iv_late import dlate_inference as default_inference_module
 from kan_d_iv_late import simulation as default_simulation_module
+from kan_d_iv_late.artifacts import ensure_directory, write_csv, write_json
 from kan_d_iv_late.config import KAN_CONFIG_LABELS, get_labeled_kan_config
 from kan_d_iv_late.provenance import collect_run_provenance
 
@@ -195,8 +195,8 @@ def _write_outputs(
     pointwise_df = pd.DataFrame(pointwise_rows, columns=POINTWISE_COLUMNS)
     summary_df = summarize_inference_outputs(pointwise_df)
 
-    pointwise_df.to_csv(pointwise_path, index=False)
-    summary_df.to_csv(summary_path, index=False)
+    write_csv(pointwise_df, pointwise_path)
+    write_csv(summary_df, summary_path)
 
     completed_keys = _completed_replication_keys(pointwise_rows)
     manifest = {
@@ -225,7 +225,7 @@ def _write_outputs(
         },
         "provenance": collect_run_provenance(),
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    write_json(manifest, manifest_path)
     return {
         "pointwise_path": pointwise_path,
         "summary_path": summary_path,
@@ -260,8 +260,7 @@ def run_profile(
         kan_config = build_labeled_kan_config(simulation, kan_config_label)
         profile = {**profile, "kan_steps": int(kan_config["steps"])}
     kan_config_id = simulation.build_kan_config_id(kan_config)
-    results_dir = Path(results_dir) / profile_name
-    results_dir.mkdir(parents=True, exist_ok=True)
+    results_dir = ensure_directory(Path(results_dir) / profile_name)
     selected_scenarios = select_scenarios(
         profile["scenarios"],
         scenario_offset=scenario_offset,

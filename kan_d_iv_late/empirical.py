@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from .artifacts import ensure_directory, write_csv
 from .crossfit import crossfit_splits
 from .dlate_score import compute_dlate_score_objects as compute_dlate_score_objects_common
 from .kan_utils import (
@@ -449,8 +450,7 @@ def main(
     the wrapper script.
     """
     print("Starting D-LATE estimation for empirical application...")
-    results_dir = Path(results_dir)
-    results_dir.mkdir(parents=True, exist_ok=True)
+    results_dir = ensure_directory(results_dir)
 
     data, x_cols = load_and_prepare_data(csv_path=data_path)
     if data.empty or len(data) < 100:
@@ -482,7 +482,7 @@ def main(
     print(results_df)
 
     results_csv_path = results_dir / "empirical_kan-d-iv-late_results.csv"
-    results_df.to_csv(results_csv_path, index=False)
+    write_csv(results_df, results_csv_path)
     print(f"\nEmpirical D-LATE results saved to {results_csv_path}")
 
     plot_path = results_dir / "empirical_kan-d-iv-late_plot.png"

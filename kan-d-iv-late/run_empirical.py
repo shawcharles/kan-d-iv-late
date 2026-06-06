@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
@@ -15,6 +14,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from kan_d_iv_late import empirical
+from kan_d_iv_late.artifacts import ensure_directory, write_csv, write_json
 from kan_d_iv_late.config import KAN_CONFIG_LABELS, get_labeled_kan_config
 from kan_d_iv_late.provenance import collect_run_provenance
 
@@ -331,7 +331,7 @@ def write_core_compatibility_assets(curves_df, results_dir):
             continue
         csv_path = results_dir / f"{output_stem}_results.csv"
         plot_path = results_dir / f"{output_stem}_plot.png"
-        curve_df.to_csv(csv_path, index=False)
+        write_csv(curve_df, csv_path)
         plt.figure(figsize=(10, 6))
         plt.plot(curve_df["y_value"], curve_df["dlate_estimate"], marker="o", linestyle="-")
         plt.title(f"Estimated Distributional LATE ({model_type.upper()}) - Pension Data")
@@ -380,8 +380,7 @@ def main():
     args = build_parser().parse_args()
     module = load_module()
 
-    results_dir = args.results_dir / args.profile
-    results_dir.mkdir(parents=True, exist_ok=True)
+    results_dir = ensure_directory(args.results_dir / args.profile)
 
     data, x_cols = module.load_and_prepare_data(csv_path=args.data)
     if data.empty or len(data) < 100:
@@ -417,10 +416,10 @@ def main():
     balance_path = results_dir / "empirical_balance.csv"
     comparison_path = results_dir / "empirical_model_comparison.csv"
 
-    curves_df.to_csv(curves_path, index=False)
-    diagnostics_df.to_csv(diagnostics_path, index=False)
-    balance_df.to_csv(balance_path, index=False)
-    comparison_df.to_csv(comparison_path, index=False)
+    write_csv(curves_df, curves_path)
+    write_csv(diagnostics_df, diagnostics_path)
+    write_csv(balance_df, balance_path)
+    write_csv(comparison_df, comparison_path)
     compatibility_assets = write_core_compatibility_assets(curves_df, results_dir)
 
     manifest = {
@@ -440,7 +439,7 @@ def main():
         "provenance": collect_run_provenance(),
     }
     manifest_path = results_dir / f"empirical_manifest_{args.profile}.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+    write_json(manifest, manifest_path)
 
     print(f"Empirical profile '{args.profile}' completed.")
     print(f"Manifest written to {manifest_path}")

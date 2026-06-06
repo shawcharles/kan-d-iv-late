@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from itertools import product
 from pathlib import Path
@@ -19,6 +18,7 @@ from kan_d_iv_late.config import (
     RF_CONFIG_ID,
     get_labeled_kan_record,
 )
+from kan_d_iv_late.artifacts import ensure_directory, read_json, write_csv, write_json
 from kan_d_iv_late.kan_utils import build_kan_config, build_kan_config_id
 from kan_d_iv_late import simulation as default_simulation_module
 from kan_d_iv_late.provenance import collect_run_provenance
@@ -339,13 +339,11 @@ def render_kan_ablation_listing(profile_name):
 
 
 def _load_json(path):
-    with Path(path).open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+    return read_json(path)
 
 
 def _write_json(path, payload):
-    with Path(path).open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, sort_keys=True)
+    return write_json(payload, path)
 
 
 def load_completed_scenario_record(scenario_dir, scenario, *, profile_name, seed_base):
@@ -493,8 +491,8 @@ def aggregate_profile_outputs(profile_name, profile_dir, scenario_records):
 
     scenario_summary_path = profile_dir / "profile_scenario_summary.csv"
     model_comparison_path = profile_dir / "profile_model_comparison.csv"
-    profile_scenario_summary.to_csv(scenario_summary_path, index=False)
-    profile_model_comparison.to_csv(model_comparison_path, index=False)
+    write_csv(profile_scenario_summary, scenario_summary_path)
+    write_csv(profile_model_comparison, model_comparison_path)
 
     aggregate_manifest = {
         "profile_name": profile_name,
@@ -625,8 +623,8 @@ def aggregate_kan_ablation_outputs(profile_name, profile_dir, run_records):
     summary_path = profile_dir / "kan_ablation_summary.csv"
     comparison_path = profile_dir / "kan_ablation_model_comparison.csv"
     decision_path = profile_dir / "kan_ablation_lock_decision.json"
-    ablation_summary.to_csv(summary_path, index=False)
-    ablation_comparison.to_csv(comparison_path, index=False)
+    write_csv(ablation_summary, summary_path)
+    write_csv(ablation_comparison, comparison_path)
     _write_json(decision_path, lock_decision)
 
     return {
@@ -651,7 +649,7 @@ def run_profile(
     profile_dir = results_dir / profile_name
     if kan_config_label is not None:
         profile_dir = profile_dir / kan_config_label
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile_dir = ensure_directory(profile_dir)
 
     scenarios = apply_kan_config_label(build_profile_scenarios(profile_name), kan_config_label)
     selected_scenarios = select_scenarios(
@@ -683,7 +681,7 @@ def run_profile(
         if scenario not in selected_scenarios:
             continue
         scenario_dir = profile_dir / scenario_label(scenario)
-        scenario_dir.mkdir(parents=True, exist_ok=True)
+        scenario_dir = ensure_directory(scenario_dir)
 
         seed_base = SEED_BASE_START + 1000 * scenario_index
         scenario_record = None
@@ -782,8 +780,7 @@ def run_kan_ablation(
 ):
     simulation_module = simulation_module or default_simulation_module
     results_dir = Path(results_dir)
-    profile_dir = results_dir / "ablation_kan" / profile_name
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile_dir = ensure_directory(results_dir / "ablation_kan" / profile_name)
 
     scenarios = build_kan_ablation_scenarios(profile_name)
     configs = build_kan_ablation_configs(profile_name)
@@ -821,8 +818,7 @@ def run_kan_ablation(
         base_label = scenario_label(scenario)
 
         for config in configs:
-            run_dir = profile_dir / base_label / config["kan_ablation_label"]
-            run_dir.mkdir(parents=True, exist_ok=True)
+            run_dir = ensure_directory(profile_dir / base_label / config["kan_ablation_label"])
             run_record = None
 
             if resume:

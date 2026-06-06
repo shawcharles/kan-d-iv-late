@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import shutil
@@ -11,6 +10,7 @@ import pandas as pd
 
 from .crossfit import crossfit_splits
 from .dlate_score import compute_dlate_score_objects
+from .artifacts import ensure_directory, write_csv, write_json
 from .kan_utils import (
     DEFAULT_PROBABILITY_EPSILON,
     GRID_SIZE,
@@ -902,7 +902,7 @@ def write_benchmark_outputs(
     manifest,
 ):
     """Write simulation outputs and return the output paths."""
-    results_dir.mkdir(parents=True, exist_ok=True)
+    results_dir = ensure_directory(results_dir)
 
     truth_path = results_dir / f"simulation_truth_{run_label}.csv"
     summary_path = results_dir / f"simulation_summary_{run_label}.csv"
@@ -912,12 +912,12 @@ def write_benchmark_outputs(
     manifest_path = results_dir / f"simulation_manifest_{run_label}.json"
     compatibility_path = results_dir / "simulation_results.csv"
 
-    truth_bundle["truth_df"].to_csv(truth_path, index=False)
-    summary_df.to_csv(summary_path, index=False)
-    replication_results.to_csv(replications_path, index=False)
-    diagnostic_results.to_csv(diagnostics_path, index=False)
-    scenario_summary.to_csv(diagnostics_summary_path, index=False)
-    build_compatibility_summary(summary_df).to_csv(compatibility_path, index=False)
+    write_csv(truth_bundle["truth_df"], truth_path)
+    write_csv(summary_df, summary_path)
+    write_csv(replication_results, replications_path)
+    write_csv(diagnostic_results, diagnostics_path)
+    write_csv(scenario_summary, diagnostics_summary_path)
+    write_csv(build_compatibility_summary(summary_df), compatibility_path)
 
     manifest = dict(manifest)
     manifest["output_files"] = {
@@ -930,8 +930,7 @@ def write_benchmark_outputs(
         "compatibility_summary": str(compatibility_path),
         "manifest": str(manifest_path),
     }
-    with manifest_path.open("w", encoding="utf-8") as handle:
-        json.dump(manifest, handle, indent=2, sort_keys=True)
+    write_json(manifest, manifest_path)
 
     return {
         "truth": truth_path,
