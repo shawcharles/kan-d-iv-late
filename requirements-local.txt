@@ -1,0 +1,7 @@
+# Local editable development install.
+#
+# Run from the repository root:
+#   python -m pip install -r requirements-local.txt
+
+-e ../efficient-kan
+-e ".[dev]"

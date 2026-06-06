@@ -1,0 +1,30 @@
+[project]
+name = "kan-d-iv-late"
+version = "0.1.0"
+description = "Research code for D-IV-LATE nuisance-learner comparison."
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+    "numpy>=1.26,<3",
+    "pandas>=2.0,<3",
+    "scikit-learn>=1.4,<2",
+    "matplotlib>=3.7,<4",
+    "torch>=2.3",
+    "efficient-kan @ git+https://github.com/shawcharles/efficient-kan.git@c07843613e9e5c09523e09c000038128bc41cde4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+]
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["kan_d_iv_late*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

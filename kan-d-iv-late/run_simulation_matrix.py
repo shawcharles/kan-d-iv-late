@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import sys
 from itertools import product
@@ -9,22 +8,29 @@ from pathlib import Path
 
 import pandas as pd
 
-PROJECT_DIR = Path(__file__).resolve().parent
-CODE_DIR = PROJECT_DIR / "code"
-SCRIPT_PATH = CODE_DIR / "kan-d-iv-late_simulation.py"
-DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "simulation_runs" / "matrix"
-if str(CODE_DIR) not in sys.path:
-    sys.path.insert(0, str(CODE_DIR))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from provenance import collect_run_provenance
+from kan_d_iv_late.config import (
+    KAN_ABLATION_CONFIG_LIBRARY,
+    KAN_CONFIG_ID,
+    KAN_CONFIG_LABELS,
+    RF_CONFIG_ID,
+    get_labeled_kan_record,
+)
+from kan_d_iv_late.kan_utils import build_kan_config, build_kan_config_id
+from kan_d_iv_late import simulation as default_simulation_module
+from kan_d_iv_late.provenance import collect_run_provenance
+
+PROJECT_DIR = Path(__file__).resolve().parent
+DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "simulation_runs" / "matrix"
 
 
 DESIGN_NAMES = ("smooth_low", "baseline", "complex_local")
 INSTRUMENT_STRENGTH_NAMES = ("weak", "medium", "strong")
 SAMPLE_SIZE_GRID = (500, 1000, 2000)
 DEFAULT_TRUTH_SEED = 1729
-RF_CONFIG_ID = "rf_core_v1"
-KAN_CONFIG_ID = "kan_core_v1"
 SEED_BASE_START = 20260420
 SCENARIO_REQUIRED_OUTPUT_KEYS = (
     "truth",
@@ -42,74 +48,8 @@ KAN_ABLATION_OUTPUT_KEYS = (
 )
 
 
-def build_kan_config(
-    *,
-    steps=25,
-    hidden_dim=16,
-    grid_size=4,
-    spline_order=3,
-    lr=1e-3,
-    weight_decay=1e-4,
-    reg_strength=1e-4,
-    min_class_count=5,
-    probability_epsilon=1e-6,
-):
-    return {
-        "steps": int(steps),
-        "hidden_dim": int(hidden_dim),
-        "grid_size": int(grid_size),
-        "spline_order": int(spline_order),
-        "lr": float(lr),
-        "weight_decay": float(weight_decay),
-        "reg_strength": float(reg_strength),
-        "min_class_count": int(min_class_count),
-        "probability_epsilon": float(probability_epsilon),
-    }
-
-
-def build_kan_config_id(config, *, default_id="kan_core_v1"):
-    normalized = build_kan_config(**config)
-    if normalized == build_kan_config():
-        return default_id
-    reg_component = f"{normalized['reg_strength']:.0e}".replace("+0", "").replace("+", "")
-    lr_component = f"{normalized['lr']:.0e}".replace("+0", "").replace("+", "")
-    wd_component = f"{normalized['weight_decay']:.0e}".replace("+0", "").replace("+", "")
-    return (
-        "kan"
-        f"_hd{normalized['hidden_dim']}"
-        f"_gs{normalized['grid_size']}"
-        f"_sp{normalized['spline_order']}"
-        f"_st{normalized['steps']}"
-        f"_lr{lr_component}"
-        f"_wd{wd_component}"
-        f"_reg{reg_component}"
-    )
-
-KAN_ABLATION_CONFIG_LIBRARY = (
-    {"label": "kan_core_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=4, reg_strength=1e-4)},
-    {"label": "kan_width8_v1", "params": build_kan_config(steps=25, hidden_dim=8, grid_size=4, reg_strength=1e-4)},
-    {"label": "kan_width64_v1", "params": build_kan_config(steps=25, hidden_dim=64, grid_size=4, reg_strength=1e-4)},
-    {"label": "kan_steps10_v1", "params": build_kan_config(steps=10, hidden_dim=16, grid_size=4, reg_strength=1e-4)},
-    {"label": "kan_steps50_v1", "params": build_kan_config(steps=50, hidden_dim=16, grid_size=4, reg_strength=1e-4)},
-    {"label": "kan_reg1e-5_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=4, reg_strength=1e-5)},
-    {"label": "kan_reg1e-3_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=4, reg_strength=1e-3)},
-    {"label": "kan_grid3_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=3, reg_strength=1e-4)},
-    {"label": "kan_grid6_v1", "params": build_kan_config(steps=25, hidden_dim=16, grid_size=6, reg_strength=1e-4)},
-)
-KAN_CONFIG_LABELS = tuple(item["label"] for item in KAN_ABLATION_CONFIG_LIBRARY)
-
-
 def build_labeled_kan_config(label):
-    for item in KAN_ABLATION_CONFIG_LIBRARY:
-        if item["label"] == label:
-            config = dict(item["params"])
-            return {
-                "kan_config_label": label,
-                "kan_config": config,
-                "kan_config_id": build_kan_config_id(config),
-                "kan_steps": config["steps"],
-            }
-    raise ValueError(f"Unsupported KAN config label: {label}")
+    return get_labeled_kan_record(label)
 
 
 def apply_kan_config_label(scenarios, kan_config_label):
@@ -128,17 +68,6 @@ def apply_kan_config_label(scenarios, kan_config_label):
 
 def scenario_kan_config(scenario):
     return build_kan_config(**scenario.get("kan_config", {"steps": scenario["kan_steps"]}))
-
-
-def load_simulation_module():
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
-
-    spec = importlib.util.spec_from_file_location("kan_d_iv_late_simulation", SCRIPT_PATH)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
 
 
 def scenario_label(scenario):
@@ -717,7 +646,7 @@ def run_profile(
     scenario_count=None,
     kan_config_label=None,
 ):
-    simulation_module = simulation_module or load_simulation_module()
+    simulation_module = simulation_module or default_simulation_module
     results_dir = Path(results_dir)
     profile_dir = results_dir / profile_name
     if kan_config_label is not None:
@@ -851,7 +780,7 @@ def run_kan_ablation(
     scenario_offset=0,
     scenario_count=None,
 ):
-    simulation_module = simulation_module or load_simulation_module()
+    simulation_module = simulation_module or default_simulation_module
     results_dir = Path(results_dir)
     profile_dir = results_dir / "ablation_kan" / profile_name
     profile_dir.mkdir(parents=True, exist_ok=True)

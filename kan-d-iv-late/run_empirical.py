@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import sys
 import time
@@ -11,34 +10,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from kan_d_iv_late import empirical
+from kan_d_iv_late.config import KAN_CONFIG_LABELS, get_labeled_kan_config
+from kan_d_iv_late.provenance import collect_run_provenance
+
 PROJECT_DIR = Path(__file__).resolve().parent
-CODE_DIR = PROJECT_DIR / "code"
-SCRIPT_PATH = CODE_DIR / "kan-d-iv-late_empirical_application.py"
 DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "empirical_runs"
-if str(CODE_DIR) not in sys.path:
-    sys.path.insert(0, str(CODE_DIR))
-
-from provenance import collect_run_provenance
-
-
-KAN_CONFIG_LABELS = ("kan_width64_v1",)
 
 
 def build_labeled_kan_config(module, label):
-    if label == "kan_width64_v1":
+    if label == "kan_width64_v1" and hasattr(module, "build_kan_config"):
         return module.build_kan_config(steps=25, hidden_dim=64, grid_size=4, reg_strength=1e-4)
-    raise ValueError(f"Unsupported KAN config label: {label}")
+    return get_labeled_kan_config(label)
 
 
 def load_module():
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
+    """Return the active empirical module.
 
-    spec = importlib.util.spec_from_file_location("kan_d_iv_late_empirical_application", SCRIPT_PATH)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    This keeps the test injection seam from the pre-package runner without
+    using dynamic file imports in production code.
+    """
+    return empirical
 
 
 def build_empirical_specs(module, profile_name, *, y_points, folds, kan_steps, kan_config_label=None):

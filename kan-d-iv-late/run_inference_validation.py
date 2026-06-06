@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import sys
 from pathlib import Path
@@ -9,19 +8,20 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-PROJECT_DIR = Path(__file__).resolve().parent
-CODE_DIR = PROJECT_DIR / "code"
-SIMULATION_SCRIPT = CODE_DIR / "kan-d-iv-late_simulation.py"
-INFERENCE_SCRIPT = CODE_DIR / "dlate_inference.py"
-DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "inference_runs"
-if str(CODE_DIR) not in sys.path:
-    sys.path.insert(0, str(CODE_DIR))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from provenance import collect_run_provenance
+from kan_d_iv_late import dlate_inference as default_inference_module
+from kan_d_iv_late import simulation as default_simulation_module
+from kan_d_iv_late.config import KAN_CONFIG_LABELS, get_labeled_kan_config
+from kan_d_iv_late.provenance import collect_run_provenance
+
+PROJECT_DIR = Path(__file__).resolve().parent
+DEFAULT_RESULTS_DIR = PROJECT_DIR / "results" / "inference_runs"
 
 DEFAULT_TRUTH_SEED = 1729
 DEFAULT_SEED_BASE = 20260420
-KAN_CONFIG_LABELS = ("kan_width64_v1",)
 POINTWISE_COLUMNS = [
     "profile_name",
     "scenario_label",
@@ -63,20 +63,9 @@ SUMMARY_COLUMNS = [
 
 
 def build_labeled_kan_config(simulation, label):
-    if label == "kan_width64_v1":
+    if label == "kan_width64_v1" and hasattr(simulation, "build_kan_config"):
         return simulation.build_kan_config(steps=25, hidden_dim=64, grid_size=4, reg_strength=1e-4)
-    raise ValueError(f"Unsupported KAN config label: {label}")
-
-
-def load_module(path, module_name):
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
-
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
+    return get_labeled_kan_config(label)
 
 
 def build_inference_profile(profile_name):
@@ -257,8 +246,8 @@ def run_profile(
     scenario_offset=0,
     scenario_count=None,
 ):
-    simulation = simulation_module or load_module(SIMULATION_SCRIPT, "kan_d_iv_late_simulation")
-    inference = inference_module or load_module(INFERENCE_SCRIPT, "dlate_inference")
+    simulation = simulation_module or default_simulation_module
+    inference = inference_module or default_inference_module
 
     profile = build_inference_profile(profile_name)
     if kan_steps is not None:

@@ -1,24 +1,16 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import sys
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from kan_d_iv_late import simulation
+
 PROJECT_DIR = Path(__file__).resolve().parent
-CODE_DIR = PROJECT_DIR / "code"
-SCRIPT_PATH = CODE_DIR / "kan-d-iv-late_simulation.py"
-
-
-def load_module():
-    if str(CODE_DIR) not in sys.path:
-        sys.path.insert(0, str(CODE_DIR))
-
-    spec = importlib.util.spec_from_file_location("kan_d_iv_late_simulation", SCRIPT_PATH)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
 
 
 def build_parser():
@@ -62,8 +54,7 @@ def main():
         if args.tag is None:
             args.tag = "quick"
 
-    module = load_module()
-    module.main(
+    simulation.main(
         results_dir=args.results_dir,
         n_simulations=args.n_simulations,
         n_samples=args.n_samples,

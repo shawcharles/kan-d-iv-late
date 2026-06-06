@@ -15,10 +15,10 @@ This repository has been rationalised into one reviewer-usable path.
 
 ```text
 .
-├── kan-d-iv-late/          # Active code, data, and results path
+├── kan_d_iv_late/          # Importable Python package
+├── kan-d-iv-late/          # CLI wrappers, data, and results path
 ├── .planning/              # GSD-style publication planning workspace
-├── main.tex                # Paper draft
-├── preamble.tex
+├── paper/                  # Paper draft and compiled PDF
 └── legacy/                 # Archived duplicate project trees (after rationalisation)
 ```
 
@@ -34,15 +34,18 @@ That duplication made it hard to know which scripts, data, and outputs are autho
 
 ## Canonical Setup
 
-Use one environment path for the active tree:
+For local development with the sibling `efficient-kan` checkout:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r kan-d-iv-late/requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements-local.txt
 ```
 
-The active KAN backend is `efficient-kan`, installed via `kan-d-iv-late/requirements.txt`.
+For a non-local install, the project metadata and legacy requirements file pin
+`efficient-kan` to the commit used for the corrected Phase 5 evidence:
+`c07843613e9e5c09523e09c000038128bc41cde4`.
 
 ## Canonical Commands
 
@@ -69,9 +72,13 @@ Versioned simulation artifacts are written under `kan-d-iv-late/results/simulati
 Current test gate:
 
 ```bash
-pytest -q
+pytest -q tests
 ```
 
 ## Current Caveat
 
-The active code path is now canonical through Phase 2 execution. The remaining publication risks are the missing experiment matrix, empirical robustness work, inference validation, and manuscript revision.
+The importable package is now the active implementation surface. The
+`kan-d-iv-late/` directory remains the canonical data/results and CLI-wrapper
+location. The main numerical evidence has been regenerated under the corrected
+score path; outstanding publication work is now robustness/calibration and
+final submission polish, not another score correction.

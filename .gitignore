@@ -3,8 +3,21 @@
 **/__pycache__/
 *.py[cod]
 .ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
 
 legacy/
 
 AGENTS.md
 handoff/
+
+# Generated research artifacts. Historical tracked artifacts remain tracked,
+# but new smoke/full reruns should not be added accidentally.
+paper/*.aux
+paper/*.log
+paper/*.spl
+kan-d-iv-late/results/simulation_runs/
+kan-d-iv-late/results/empirical_runs/
+kan-d-iv-late/results/inference_runs/
+kan-d-iv-late/results/corrected_*/
