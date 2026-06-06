@@ -172,6 +172,8 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
         build_truth_bundle=lambda **kwargs: {
             "truth_df": pd.DataFrame({"y": [0.0, 1.0], "true_dlate": [0.25, 0.75]})
         },
+        build_kan_config=lambda **kwargs: {"steps": kwargs.get("steps", 1), "hidden_dim": kwargs.get("hidden_dim", 16)},
+        build_kan_config_id=lambda config: f"kan_hd{config['hidden_dim']}_st{config['steps']}",
         generate_dlate_data=lambda **kwargs: (sample_data(), None),
         estimate_nuisance_functions=fake_estimate_nuisance_functions,
     )
@@ -214,6 +216,8 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
 
     assert manifest["profile"] == "smoke"
     assert manifest["kan_steps"] == 7
+    assert manifest["kan_config_label"] is None
+    assert manifest["kan_config_id"] == "kan_hd16_st7"
     assert manifest["completed_replication_count"] == 2
     assert_manifest_provenance(manifest)
     assert pointwise.shape[0] == 4
@@ -235,3 +239,58 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
 
     resumed_manifest = json.loads(resumed["manifest_path"].read_text(encoding="utf-8"))
     assert resumed_manifest["completed_replication_count"] == 2
+
+
+def test_inference_runner_accepts_labeled_kan_config(tmp_path):
+    seen_kan_configs = []
+
+    def fake_estimate_nuisance_functions(*args, **kwargs):
+        seen_kan_configs.append(kwargs["kan_config"])
+        return sample_nuisance()
+
+    runner = load_module("../run_inference_validation.py", "run_inference_validation_labeled_config")
+
+    fake_simulation = types.SimpleNamespace(
+        PROBABILITY_EPSILON=1e-6,
+        build_truth_bundle=lambda **kwargs: {
+            "truth_df": pd.DataFrame({"y": [0.0], "true_dlate": [0.25]})
+        },
+        build_kan_config=lambda **kwargs: {"steps": kwargs.get("steps", 1), "hidden_dim": kwargs.get("hidden_dim", 16)},
+        build_kan_config_id=lambda config: f"kan_hd{config['hidden_dim']}_st{config['steps']}",
+        generate_dlate_data=lambda **kwargs: (sample_data(), None),
+        estimate_nuisance_functions=fake_estimate_nuisance_functions,
+    )
+    fake_inference = types.SimpleNamespace(
+        dlate_asymptotic_inference=lambda *args, **kwargs: {
+            "point_estimates": np.array([0.2]),
+            "ci_lower": np.array([0.1]),
+            "ci_upper": np.array([0.3]),
+            "mean_psi_beta": 0.5,
+            "near_zero_denominator": False,
+        },
+        bootstrap_dlate_inference=lambda *args, **kwargs: {
+            "point_estimates": np.array([0.2]),
+            "ci_lower": np.array([0.1]),
+            "ci_upper": np.array([0.3]),
+        },
+        summarize_interval_coverage=lambda point, lower, upper, truth: {
+            "covers": np.array([True]),
+            "widths": upper - lower,
+        },
+    )
+
+    outputs = runner.run_profile(
+        profile_name="smoke",
+        results_dir=tmp_path,
+        kan_steps=100,
+        kan_config_label="kan_width64_v1",
+        simulation_module=fake_simulation,
+        inference_module=fake_inference,
+    )
+
+    manifest = json.loads(outputs["manifest_path"].read_text(encoding="utf-8"))
+    assert manifest["kan_steps"] == 25
+    assert manifest["kan_config_label"] == "kan_width64_v1"
+    assert manifest["kan_config"] == {"steps": 25, "hidden_dim": 64}
+    assert manifest["kan_config_id"] == "kan_hd64_st25"
+    assert seen_kan_configs == [{"steps": 25, "hidden_dim": 64}, {"steps": 25, "hidden_dim": 64}]

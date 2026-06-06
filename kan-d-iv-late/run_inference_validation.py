@@ -21,6 +21,7 @@ from provenance import collect_run_provenance
 
 DEFAULT_TRUTH_SEED = 1729
 DEFAULT_SEED_BASE = 20260420
+KAN_CONFIG_LABELS = ("kan_width64_v1",)
 POINTWISE_COLUMNS = [
     "profile_name",
     "scenario_label",
@@ -59,6 +60,12 @@ SUMMARY_COLUMNS = [
     "bootstrap_coverage_gap",
     "recommended_method",
 ]
+
+
+def build_labeled_kan_config(simulation, label):
+    if label == "kan_width64_v1":
+        return simulation.build_kan_config(steps=25, hidden_dim=64, grid_size=4, reg_strength=1e-4)
+    raise ValueError(f"Unsupported KAN config label: {label}")
 
 
 def load_module(path, module_name):
@@ -183,6 +190,9 @@ def _write_outputs(
     profile_name,
     alpha,
     profile,
+    kan_config_label,
+    kan_config,
+    kan_config_id,
     results_dir,
     pointwise_rows,
     selected_scenarios,
@@ -211,6 +221,9 @@ def _write_outputs(
         "truth_sample_size": profile["truth_sample_size"],
         "k_folds": profile["k_folds"],
         "kan_steps": profile["kan_steps"],
+        "kan_config_label": kan_config_label,
+        "kan_config": kan_config,
+        "kan_config_id": kan_config_id,
         "completed_replication_count": len(completed_keys),
         "last_selection": {
             "scenario_offset": scenario_offset,
@@ -237,6 +250,7 @@ def run_profile(
     results_dir=DEFAULT_RESULTS_DIR,
     alpha=0.05,
     kan_steps=None,
+    kan_config_label=None,
     simulation_module=None,
     inference_module=None,
     resume=False,
@@ -251,6 +265,12 @@ def run_profile(
         if kan_steps <= 0:
             raise ValueError("kan_steps must be positive when provided")
         profile = {**profile, "kan_steps": int(kan_steps)}
+    if kan_config_label is None:
+        kan_config = simulation.build_kan_config(steps=profile["kan_steps"])
+    else:
+        kan_config = build_labeled_kan_config(simulation, kan_config_label)
+        profile = {**profile, "kan_steps": int(kan_config["steps"])}
+    kan_config_id = simulation.build_kan_config_id(kan_config)
     results_dir = Path(results_dir) / profile_name
     results_dir.mkdir(parents=True, exist_ok=True)
     selected_scenarios = select_scenarios(
@@ -299,6 +319,7 @@ def run_profile(
                     model_type=model_type,
                     k_folds=profile["k_folds"],
                     kan_steps=profile["kan_steps"],
+                    kan_config=kan_config,
                 )
                 asymptotic = inference.dlate_asymptotic_inference(
                     data,
@@ -315,6 +336,7 @@ def run_profile(
                         model_type=model_type,
                         k_folds=profile["k_folds"],
                         kan_steps=profile["kan_steps"],
+                        kan_config=kan_config,
                     )
 
                 bootstrap = inference.bootstrap_dlate_inference(
@@ -372,6 +394,9 @@ def run_profile(
                     profile_name=profile_name,
                     alpha=alpha,
                     profile=profile,
+                    kan_config_label=kan_config_label,
+                    kan_config=kan_config,
+                    kan_config_id=kan_config_id,
                     results_dir=results_dir,
                     pointwise_rows=pointwise_rows,
                     selected_scenarios=selected_scenarios,
@@ -383,6 +408,9 @@ def run_profile(
         profile_name=profile_name,
         alpha=alpha,
         profile=profile,
+        kan_config_label=kan_config_label,
+        kan_config=kan_config,
+        kan_config_id=kan_config_id,
         results_dir=results_dir,
         pointwise_rows=pointwise_rows,
         selected_scenarios=selected_scenarios,
@@ -409,6 +437,7 @@ def build_parser():
             "ablation lock decision so inference validates the selected policy."
         ),
     )
+    parser.add_argument("--kan-config-label", choices=KAN_CONFIG_LABELS)
     parser.add_argument(
         "--resume",
         action="store_true",
@@ -426,6 +455,7 @@ def main():
         results_dir=args.results_dir,
         alpha=args.alpha,
         kan_steps=args.kan_steps,
+        kan_config_label=args.kan_config_label,
         resume=args.resume,
         scenario_offset=args.scenario_offset,
         scenario_count=args.scenario_count,
