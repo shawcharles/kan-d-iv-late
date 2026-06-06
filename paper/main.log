@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.9.15)  21 APR 2026 07:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2025.9.15)  6 JUN 2026 20:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -530,240 +530,48 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
 ) [1
 
-{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2] [3] [4] [5]
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `cmtt' (encoding: OT1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-
-Overfull \hbox (87.47865pt too wide) in paragraph at lines 145--146
-[]\OT1/cmr/m/n/10 (-20) The \OT1/cmtt/m/n/10 efficient-kan \OT1/cmr/m/n/10 (-20
-) li-brary pro-vides in-ter-nal L1-type reg-u-lar-iza-tion on spline weights th
-rough \OT1/cmtt/m/n/10 model.regularization[]loss()\OT1/cmr/m/n/10 (-20) ,
- []
-
-[6]
+ [2] [3] [4] [5] [6]
 Overfull \hbox (32.05713pt too wide) detected at line 196
 []
  []
 
-[7] [8]
-Overfull \hbox (22.80739pt too wide) in paragraph at lines 265--277
- [][] 
- []
-
-[9] [10] [11] [12] [13] [14] (./main.aux) ) 
+[7] [8] [9] [10] [11] [12] [13] [14] (./main.aux) ) 
 Here is how much of TeX's memory you used:
- 11079 strings out of 480171
- 189895 string characters out of 5894489
- 536215 words of memory out of 5000000
- 28713 multiletter control sequences out of 15000+600000
- 485457 words of font info for 158 fonts, out of 8000000 for 9000
+ 11113 strings out of 480171
+ 190340 string characters out of 5894489
+ 535215 words of memory out of 5000000
+ 28733 multiletter control sequences out of 15000+600000
+ 488272 words of font info for 171 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
- 70i,12n,76p,1186b,316s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/share/texlive/texmf-dist/fonts
-/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1
-/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/publi
-c/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsf
-onts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm
-/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.
-pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></us
-r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/
-texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/
+ 70i,12n,76p,1186b,357s stack positions out of 5000i,500n,10000p,200000b,80000s
+</usr/share/texlive/texmf-di
+st/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texlive/texmf-dist/fon
+ts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/typ
+e1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.
+pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></us
+r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/
+texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-
 dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fo
 nts/type1/public/amsfonts/cm/cmti10.pfb></usr/share/texlive/texmf-dist/fonts/ty
 pe1/public/amsfonts/cm/cmti8.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
 lic/amsfonts/cm/cmtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
 sfonts/cm/cmtt8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
-symbols/msam10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/s
-ymbols/msbm10.pfb>
-Output written on main.pdf (14 pages, 281266 bytes).
+cm/cmtt9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols
+/msam10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/
+msbm10.pfb>
+Output written on main.pdf (14 pages, 308476 bytes).
 PDF statistics:
- 135 PDF objects out of 1000 (max. 8388607)
- 84 compressed objects within 1 object stream
+ 145 PDF objects out of 1000 (max. 8388607)
+ 90 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 27649 words of extra memory for PDF output out of 29859 (max. 10000000)
-
-94asymptotic' on page 3 undefined on i
-nput line 49.
-
-[3]
-
-Package natbib Warning: Citation `hoagland2020who' on page 4 undefined on input
- line 84.
-
-
-Package natbib Warning: Citation `imbens1994' on page 4 undefined on input line
- 91.
-
-[4]
-
-LaTeX Warning: Reference `eq:dlate_identification_cov_merged' on page 5 undefin
-ed on input line 106.
-
-
-Package natbib Warning: Citation `chernozhukov2018debiased' on page 5 undefined
- on input line 106.
-
-
-LaTeX Warning: Reference `sec:framework' on page 5 undefined on input line 120.
-
-
-[5]
-
-Package natbib Warning: Citation `liu2024kan' on page 6 undefined on input line
- 131.
-
-
-Package natbib Warning: Citation `kratsios2025kolmogorov' on page 6 undefined o
-n input line 133.
-
-Package microtype Info: Loading generic protrusion settings for font family
-(microtype)             `cmtt' (encoding: OT1).
-(microtype)             For optimal results, create family-specific settings.
-(microtype)             See the microtype manual for details.
-
-Package natbib Warning: Citation `liu2024kan' on page 6 undefined on input line
- 139.
-
-
-Overfull \hbox (87.47865pt too wide) in paragraph at lines 145--146
-[]\OT1/cmr/m/n/10 (-20) The \OT1/cmtt/m/n/10 efficient-kan \OT1/cmr/m/n/10 (-20
-) li-brary pro-vides in-ter-nal L1-type reg-u-lar-iza-tion on spline weights th
-rough \OT1/cmtt/m/n/10 model.regularization[]loss()\OT1/cmr/m/n/10 (-20) ,
- []
-
-[6]
-
-LaTeX Warning: Reference `subsec:sim_dgp2' on page 7 undefined on input line 14
-7.
-
-
-Overfull \hbox (32.05713pt too wide) detected at line 196
-[]
- []
-
-[7]
-
-LaTeX Warning: Reference `eq:moment_condition_ratio' on page 8 undefined on inp
-ut line 197.
-
-
-LaTeX Warning: Reference `ass:score_rates' on page 8 undefined on input line 21
-9.
-
-
-LaTeX Warning: Reference `eq:psi_beta' on page 8 undefined on input line 219.
-
-
-LaTeX Warning: Reference `eq:psi_alpha' on page 8 undefined on input line 219.
-
-
-LaTeX Warning: Reference `ass:independence' on page 8 undefined on input line 2
-23.
-
-
-LaTeX Warning: Reference `ass:monotonicity' on page 8 undefined on input line 2
-23.
-
-
-LaTeX Warning: Reference `ass:score_overlap' on page 8 undefined on input line 
-223.
-
-
-LaTeX Warning: Reference `ass:score_rates' on page 8 undefined on input line 22
-3.
-
-
-LaTeX Warning: Reference `thm:pointwise_asymptotics' on page 8 undefined on inp
-ut line 248.
-
-
-LaTeX Warning: Reference `eq:psi_beta' on page 8 undefined on input line 250.
-
-
-LaTeX Warning: Reference `eq:moment_condition_ratio' on page 8 undefined on inp
-ut line 250.
-
-[8]
-
-LaTeX Warning: Reference `thm:pointwise_asymptotics' on page 9 undefined on inp
-ut line 255.
-
-
-LaTeX Warning: Reference `thm:pointwise_asymptotics' on page 9 undefined on inp
-ut line 257.
-
-
-LaTeX Warning: Reference `tab:inference_summary' on page 9 undefined on input l
-ine 259.
-
-
-Overfull \hbox (22.80739pt too wide) in paragraph at lines 265--277
- [][] 
- []
-
-[9] [10]
-
-Package natbib Warning: Citation `chernozhukov2004impact' on page 11 undefined 
-on input line 348.
-
-
-LaTeX Warning: Reference `tab:empirical_robustness' on page 11 undefined on inp
-ut line 359.
-
-[11]
-
-LaTeX Warning: Reference `sec:inference' on page 12 undefined on input line 382
-.
-
-[12] [13]
-
-Package natbib Warning: There were undefined citations.
-
-[14] (./main.aux
-
-Package natbib Warning: Citation(s) may have changed.
-(natbib)                Rerun to get citations correct.
-
-)
-
-LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
- ) 
-Here is how much of TeX's memory you used:
- 11085 strings out of 480171
- 189955 string characters out of 5894489
- 536215 words of memory out of 5000000
- 28713 multiletter control sequences out of 15000+600000
- 485593 words of font info for 161 fonts, out of 8000000 for 9000
- 59 hyphenation exceptions out of 8191
- 70i,12n,76p,1189b,316s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></us
-r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></usr/share
-/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texli
-ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/tex
-mf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist
-/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
-ublic/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
-sfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/c
-m/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10
-.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></
-usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/sh
-are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmti8.pfb></usr/share/tex
-live/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texlive/t
-exmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/share/texlive/texmf-di
-st/fonts/type1/public/amsfonts/symbols/msam10.pfb></usr/share/texlive/texmf-dis
-t/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on main.pdf (14 pages, 289334 bytes).
-PDF statistics:
- 140 PDF objects out of 1000 (max. 8388607)
- 87 compressed objects within 1 object stream
- 0 named destinations out of 1000 (max. 500000)
- 27649 words of extra memory for PDF output out of 29859 (max. 10000000)
+ 32257 words of extra memory for PDF output out of 35830 (max. 10000000)
 

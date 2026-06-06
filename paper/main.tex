@@ -9,9 +9,9 @@
   \begin{abstract}
 We study how the choice of nuisance learner affects estimation of the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE) within a double/debiased machine learning framework. We compare a Random Forest benchmark against Kolmogorov-Arnold Networks (KANs) and organize the paper around three evidence blocks: a corrected estimand-aligned simulation benchmark, a targeted KAN ablation, and an empirical application to the effect of 401(k) participation on the distribution of net financial assets.
 
-The simulation benchmark uses explicit monotone principal strata and a fixed complier truth bundle across 27 scenarios spanning three design families, three instrument-strength regimes, and three sample sizes. In the full matrix, the baseline KAN implementation attains lower integrated RMSE than Random Forests in all 27 scenarios and lower runtime in 26 of 27. A targeted ablation across representative scenarios then selects a shorter KAN training schedule as the best point-estimation variant. The empirical application shows that nuisance-model choice remains substantively important: RF and KAN estimates differ materially in the core specification and across robustness checks, with frequent sign reversals along the estimated D-IV-LATE curve.
+The simulation benchmark uses explicit monotone principal strata and a fixed complier truth bundle across 27 scenarios spanning three design families, three instrument-strength regimes, and three sample sizes. Under the corrected estimator and locked width-64 KAN policy, KANs are faster in all 27 scenarios but have lower integrated RMSE in only one scenario; Random Forests have lower RMSE in the remaining 26. A targeted KAN ablation selects the width-64 KAN configuration as the best KAN variant among the configurations tested, but the model-comparison evidence is a speed/accuracy tradeoff rather than a KAN accuracy-dominance result. The empirical application shows that nuisance-model choice remains substantively important: RF and KAN estimates differ materially in the core specification, with frequent sign reversals along the estimated D-IV-LATE curve.
 
-The central limitation is now inferential rather than identification-theoretic. This revision replaces the earlier residualized score with a reduced-form orthogonal level-score estimator for the conditional-IV D-IV-LATE target. Because that correction changes the underlying numerical pipeline, the simulation, inference, and empirical results reported below must be treated as provisional until regenerated under the corrected estimator. The resulting conclusion is therefore mixed. KANs remain promising nuisance learners for D-IV-LATE point estimation, but they are not yet validated as a default inferential layer.
+The central limitation is now inferential rather than identification-theoretic. This revision replaces the earlier residualized score with a reduced-form orthogonal level-score estimator for the conditional-IV D-IV-LATE target and regenerates the main numerical evidence under that corrected code path. The resulting conclusion is mixed. KANs provide a clear runtime advantage in the implemented benchmark, but they do not deliver broad point-accuracy gains and they are not validated as a default inferential layer.
 
 \vspace{10pt}
 Keywords Distributional Treatment Effects, Instrumental Variables, Double Machine Learning, Kolmogorov-Arnold Networks, Random Forests, Uncertainty Quantification, Model Choice
@@ -23,13 +23,13 @@ Keywords Distributional Treatment Effects, Instrumental Variables, Double Machin
 
 Understanding treatment effects across the entire outcome distribution is often more informative than focusing on a single average effect. In instrumental-variables settings, this leads naturally to the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE), which traces how an endogenous binary treatment shifts the outcome distribution for compliers \citep{imbens1997estimating, abadie2002bootstrap}. The double/debiased machine learning (DML) framework is attractive in this setting because it permits flexible nuisance estimation while retaining orthogonality-based protection against first-order regularization bias \citep{chernozhukov2018debiased}.
 
-What DML does not settle is the practical choice of nuisance learner. That choice is often treated as secondary, but in distributional IV problems it can affect both the point estimate and the stability of the implied inferential procedure. This paper studies that question directly by comparing a Random Forest benchmark to Kolmogorov-Arnold Networks (KANs), a spline-based neural architecture motivated by the Kolmogorov-Arnold representation theorem \citep{liu2024kan, kratsios2025kolmogorov}. The relevant question is not whether KANs are universally superior. It is whether they improve D-IV-LATE point estimation under a disciplined benchmark, and whether any such gains survive contact with uncertainty quantification.
+What DML does not settle is the practical choice of nuisance learner. That choice is often treated as secondary, but in distributional IV problems it can affect both the point estimate and the stability of the implied inferential procedure. This paper studies that question directly by comparing a Random Forest benchmark to Kolmogorov-Arnold Networks (KANs), a spline-based neural architecture motivated by the Kolmogorov-Arnold representation theorem \citep{liu2024kan, kratsios2025kolmogorov}. The relevant question is not whether KANs are universally superior. It is when they improve D-IV-LATE point estimation or runtime under a disciplined benchmark, and whether any such gains survive contact with uncertainty quantification.
 
-Our evidence is organized around three components. First, we rebuild the simulation benchmark so that the reported truth is a genuine complier D-IV-LATE generated from explicit monotone principal strata. The resulting full matrix spans three design families, three instrument-strength regimes, and three sample sizes. In that benchmark the baseline KAN implementation achieves lower integrated RMSE than Random Forests in all 27 scenarios and lower runtime in 26 of 27. Second, we run a targeted KAN ablation and find that a shorter training schedule slightly improves on the baseline KAN configuration, suggesting that the simulation gains are not driven by a single ad hoc tuning choice. Third, we revisit the 401(k) application and find that the nuisance-model choice remains substantively important in the data: RF and KAN estimates differ materially in the core specification and across robustness checks. Because the estimator itself has now been corrected, these numerical sections should be read as placeholders until they are regenerated under the corrected code path.
+Our evidence is organized around three components. First, we rebuild the simulation benchmark so that the reported truth is a genuine complier D-IV-LATE generated from explicit monotone principal strata. The resulting full matrix spans three design families, three instrument-strength regimes, and three sample sizes. In that benchmark KAN is faster than Random Forests in all 27 scenarios, but RF has lower integrated RMSE in 26 of 27 scenarios. The lone KAN RMSE win occurs in the \texttt{complex\_local--strong--n2000} cell, where RF exhibits a large integrated-RMSE tail instability even though its mean absolute error remains slightly lower. Second, we run a targeted KAN ablation and select a width-64 KAN as the best KAN point-estimation variant among the tested configurations. Third, we revisit the 401(k) application and find that the nuisance-model choice remains substantively important in the data: RF and KAN estimates differ materially in the corrected core specification.
 
-The paper's main result is therefore not a blanket endorsement of KANs. A dedicated inference validation study shows that KAN-based pointwise intervals undercover badly under both asymptotic and bootstrap constructions. Random Forest intervals are materially better calibrated, although often much wider. The strongest defensible conclusion is thus mixed: KANs are promising for D-IV-LATE point estimation, but they are not yet validated as an end-to-end inferential default.
+The paper's main result is therefore not a blanket endorsement of KANs. A dedicated inference validation study shows that KAN-based pointwise intervals undercover badly under both asymptotic and bootstrap constructions. Random Forest intervals are materially better calibrated in the validation design. The strongest defensible conclusion is thus mixed: KANs are computationally attractive nuisance learners in this implementation, but they are not yet validated as an end-to-end point-estimation or inferential default.
 
-This paper makes four contributions. First, it provides a corrected and reproducible benchmark for D-IV-LATE model comparison. Second, it documents large and systematic point-estimation gains from flexible spline-based nuisance learning in that benchmark. Third, it shows that those gains do not eliminate substantive model-choice sensitivity in an empirical application. Fourth, it demonstrates that point-estimation gains and inferential validity need not move together, and that this separation matters for what can be claimed credibly in applied work.
+This paper makes four contributions. First, it provides a corrected and reproducible benchmark for D-IV-LATE model comparison. Second, it documents a clear computational speed advantage for the implemented KAN nuisance learner, while showing that this advantage does not translate into broad RMSE gains in the corrected benchmark. Third, it shows that nuisance-model choice remains substantively important in an empirical application. Fourth, it demonstrates that point-estimation performance, runtime, and inferential validity need not move together, and that this separation matters for what can be claimed credibly in applied work.
 
 The remainder of the paper is organized as follows. Section \ref{sec:lit_review} reviews the relevant literature. Section \ref{sec:framework} presents the identification framework for D-IV-LATE, and Section \ref{sec:estimation} describes the orthogonal-score estimator and the nuisance-learning implementations. Section \ref{sec:asymptotics} states the asymptotic result. Section \ref{sec:inference} evaluates uncertainty quantification, Section \ref{sec:simulations} reports the simulation benchmark and KAN ablation, Section \ref{sec:empirical_app} presents the 401(k) application, Section \ref{sec:caveat_emptor} discusses the implications for model choice, and Section \ref{sec:conclusion} concludes.
 
@@ -138,13 +138,13 @@ Third, KANs can be more data-efficient. By learning the activation functions, KA
 \label{subsubsec:kans_implementation}
 The practical implementation of our KAN-D-IV-LATE estimator relies on the \texttt{efficient-kan} library\footnote{Our specific implementation is available at \url{https://github.com/shawcharles/efficient-kan}. The original KAN concept was introduced by \citet{liu2024kan}.} which is a PyTorch-based version designed for improved computational performance.
 
-For estimating $\hat{\pi}(x)$, $\hat{m}_0(x)$, $\hat{m}_1(x)$, $\hat{g}_0(y,x)$, and $\hat{g}_1(y,x)$, we use KAN architectures specified by the \texttt{layers\_hidden} parameter in \texttt{efficient-kan}. For all nuisance functions, we use a structure of \texttt{[input\_dim, 16, 1]}. This structure corresponds to an input layer, one hidden layer with 16 neurons, and a single output neuron. The \texttt{input\_dim} varies by nuisance function: it is $d_X$ for $\hat{\pi}(x)$ and $d_X+1$ for reduced-form nuisances that include the instrument indicator as an input. In the active implementation, $\hat{m}_0$ and $\hat{m}_1$ are obtained by fitting a single learner for $\mathbb{E}[W \mid Z, X]$ and evaluating it at $Z=0$ and $Z=1$; $\hat{g}_0$ and $\hat{g}_1$ are obtained analogously from a learner for $\mathbb{E}[\ind\{Y \le y\} \mid Z, X]$.
+For estimating $\hat{\pi}(x)$, $\hat{m}_0(x)$, $\hat{m}_1(x)$, $\hat{g}_0(y,x)$, and $\hat{g}_1(y,x)$, we use KAN architectures specified by the \texttt{layers\_hidden} parameter in \texttt{efficient-kan}. The locked KAN policy used for the corrected numerical evidence is \texttt{kan\_width64\_v1}, with a structure of \texttt{[input\_dim, 64, 1]}. This structure corresponds to an input layer, one hidden layer with 64 neurons, and a single output neuron. The \texttt{input\_dim} varies by nuisance function: it is $d_X$ for $\hat{\pi}(x)$ and $d_X+1$ for reduced-form nuisances that include the instrument indicator as an input. In the active implementation, $\hat{m}_0$ and $\hat{m}_1$ are obtained by fitting a single learner for $\mathbb{E}[W \mid Z, X]$ and evaluating it at $Z=0$ and $Z=1$; $\hat{g}_0$ and $\hat{g}_1$ are obtained analogously from a learner for $\mathbb{E}[\ind\{Y \le y\} \mid Z, X]$.
 
-The baseline KAN specification used in the core simulation benchmark employs cubic splines with \texttt{grid\_size} 4, AdamW with learning rate $1 \times 10^{-3}$, weight decay $1 \times 10^{-4}$, and an L1-type spline regularization penalty of $1 \times 10^{-4}$. In the full benchmark this baseline KAN was trained for 25 optimization steps. The empirical pipeline, by contrast, used a fixed higher-step KAN specification in order to preserve comparability with the canonical application code. We therefore treat the later KAN ablation as a separate model-selection exercise rather than as post hoc retuning of the main benchmark.
+The locked KAN specification employs cubic splines with \texttt{grid\_size} 4, AdamW with learning rate $1 \times 10^{-3}$, weight decay $1 \times 10^{-4}$, and an L1-type spline regularization penalty of $1 \times 10^{-4}$. It is trained for 25 optimization steps. The corrected empirical and inference reruns use the same locked KAN policy so that the numerical evidence is aligned across sections.
 
-The \texttt{efficient-kan} library provides internal L1-type regularization on spline weights through \texttt{model.regularization\_loss()}, which we add directly to the training loss. For numerical stability, if the minority-class count for a binary nuisance target within a training fold falls below a prespecified threshold, KAN fitting is bypassed and the predictor is set to the majority-class value.
+The \texttt{efficient-kan} library provides internal L1-type regularization on spline weights through its regularization-loss method, which we add directly to the training loss. For numerical stability, if the minority-class count for a binary nuisance target within a training fold falls below a prespecified threshold, KAN fitting is bypassed and the predictor is set to the majority-class value.
 
-Cross-fitting varies by experiment. The main simulation benchmark uses $K=3$ folds for computational tractability across the 27-scenario matrix, whereas the empirical application uses $K=5$ folds. Section \ref{subsec:sim_dgp2} reports the targeted KAN ablation over width, grid size, training steps, and regularization strength. That ablation selects a shorter 10-step variant as the best point-estimation configuration across its representative scenarios.
+Cross-fitting varies by experiment. The main simulation benchmark uses $K=3$ folds for computational tractability across the 27-scenario matrix, whereas the empirical application uses $K=5$ folds. Section \ref{subsec:sim_dgp2} reports the targeted KAN ablation over width, grid size, training steps, and regularization strength. That ablation selects the width-64 variant as the best KAN point-estimation configuration across its representative scenarios.
 
 \subsection{Orthogonal Level Scores for D-IV-LATE}
 
@@ -256,27 +256,28 @@ Theorem \ref{thm:pointwise_asymptotics} supplies a pointwise asymptotic justific
 
 For each estimated D-IV-LATE curve we construct pointwise asymptotic intervals using the influence-function variance estimator implied by Theorem \ref{thm:pointwise_asymptotics}. We also construct a resampling-based alternative using a bootstrap that preserves the sample-splitting structure. The inferential comparison is conducted in three representative simulation scenarios: \texttt{smooth\_low--weak--n500}, \texttt{baseline--medium--n1000}, and \texttt{complex\_local--weak--n500}. Each model is evaluated over eight Monte Carlo replications, and coverage is averaged over the evaluation grid.
 
-Table \ref{tab:inference_summary} reports the resulting coverage and interval-width summaries at the nominal 95\% level. The pattern is unambiguous. KAN-based intervals are too narrow and undercover badly. Depending on the scenario, asymptotic KAN coverage ranges from 0.188 to 0.516, and bootstrap KAN coverage ranges from 0.203 to 0.266. Random Forest intervals are materially better calibrated: asymptotic RF coverage ranges from 0.766 to 0.984, although this comes at the cost of substantially wider intervals. The most extreme case is \texttt{smooth\_low--weak--n500}, where RF asymptotic coverage is near nominal at 0.984 but the mean asymptotic interval width is 51.09 and the bootstrap width is over 1,000.
+Table \ref{tab:inference_summary} reports the resulting coverage and interval-width summaries at the nominal 95\% level. The pattern is unambiguous. KAN-based intervals are too narrow and undercover badly. Depending on the scenario, asymptotic KAN coverage ranges from 0.500 to 0.813, and bootstrap KAN coverage ranges from 0.359 to 0.500. Random Forest intervals are materially better calibrated: asymptotic RF coverage ranges from 0.922 to 0.969. Bootstrap intervals do not repair the KAN undercoverage in this implementation; they generally make it worse.
 
 \begin{table}[htbp]
 \centering
 \caption{Inference-validation summary across three representative scenarios. Coverage is averaged across the evaluation grid; the nominal target is 0.95.}
 \label{tab:inference_summary}
+\small
 \begin{tabular}{@{}llrrrrl@{}}
 \toprule
 Scenario & Model & Asym. cov. & Boot. cov. & Asym. width & Boot. width & Preferred \\
 \midrule
-\texttt{smooth\_low, weak, n=500} & KAN & 0.516 & 0.250 & 1.33 & 1.88 & Asymptotic \\
-\texttt{smooth\_low, weak, n=500} & RF  & 0.984 & 0.984 & 51.09 & 1083.75 & Asymptotic \\
-\texttt{baseline, medium, n=1000} & KAN & 0.188 & 0.203 & 0.20 & 0.30 & Bootstrap \\
-\texttt{baseline, medium, n=1000} & RF  & 0.766 & 0.500 & 9.18 & 24.21 & Asymptotic \\
-\texttt{complex\_local, weak, n=500} & KAN & 0.422 & 0.266 & 1.01 & 1.44 & Asymptotic \\
-\texttt{complex\_local, weak, n=500} & RF  & 0.797 & 0.641 & 34.44 & 73.44 & Asymptotic \\
+\texttt{smooth\_low, weak, n=500} & KAN & 0.813 & 0.500 & 0.927 & 0.841 & Asymptotic \\
+\texttt{smooth\_low, weak, n=500} & RF  & 0.969 & 0.984 & 2.359 & 1.728 & Asymptotic \\
+\texttt{baseline, medium, n=1000} & KAN & 0.500 & 0.359 & 0.182 & 0.134 & Asymptotic \\
+\texttt{baseline, medium, n=1000} & RF  & 0.969 & 0.922 & 0.162 & 0.180 & Asymptotic \\
+\texttt{complex\_local, weak, n=500} & KAN & 0.750 & 0.391 & 0.816 & 0.706 & Asymptotic \\
+\texttt{complex\_local, weak, n=500} & RF  & 0.922 & 0.719 & 0.741 & 0.638 & Asymptotic \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-These results substantially narrow the set of defensible claims. The current evidence supports KANs as point estimators, not as a validated inferential default. For the purposes of this paper, the empirical comparison is therefore interpreted primarily through point estimates and robustness patterns. Where interval-based interpretation is necessary, RF asymptotic inference is the safer baseline among the procedures we tested. Uniform inference over $y$ and more reliable interval construction for flexible nuisance learners remain open problems.
+These results substantially narrow the set of defensible claims. The current evidence does not support KANs as a validated inferential default. For the purposes of this paper, the empirical comparison is therefore interpreted primarily through point estimates and model-choice sensitivity. Where interval-based interpretation is necessary, RF asymptotic inference is the safer baseline among the procedures we tested. Uniform inference over $y$ and more reliable interval construction for flexible nuisance learners remain open problems.
 
 \section{Simulation Study}
 \label{sec:simulations}
@@ -292,7 +293,7 @@ The full benchmark crosses three design families (\texttt{smooth\_low}, \texttt{
 
 \begin{table}[htbp]
 \centering
-\caption{Full simulation benchmark summary for the phase-3 core matrix. Reported deltas are KAN minus RF.}
+\caption{Full corrected simulation benchmark summary under the locked \texttt{kan\_width64\_v1} policy. Reported deltas are KAN minus RF.}
 \label{tab:sim_results_summary_dgp1}
 \begin{tabular}{@{}lr@{}}
 \toprule
@@ -300,24 +301,23 @@ Metric & Value \\
 \midrule
 Number of scenarios & 27 \\
 Replications per scenario & 50 \\
-KAN lower integrated RMSE & 27/27 \\
-KAN lower mean absolute error & 27/27 \\
-KAN faster mean runtime & 26/27 \\
-Mean integrated RMSE delta & -5.100 \\
-Mean absolute-error delta & -3.267 \\
-Mean runtime delta (seconds) & -3.303 \\
-Mean fragile-denominator-share delta & -0.046 \\
-NaN-rate difference & 0.000 \\
+KAN lower integrated RMSE & 1/27 \\
+KAN lower mean absolute error & 0/27 \\
+KAN faster mean runtime & 27/27 \\
+Mean integrated RMSE delta & 0.073 \\
+Median integrated RMSE delta & 0.060 \\
+Mean absolute-error delta & 0.077 \\
+Mean runtime delta (seconds) & -3.169 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The performance gains are broad rather than isolated. KAN has lower integrated RMSE in every one of the 27 benchmark scenarios. The gains are largest in the weak-instrument cells, where RF also exhibits more frequent denominator fragility. For example, in \texttt{smooth\_low--weak--n2000} the integrated-RMSE difference is $-11.927$ in favor of KAN, and in \texttt{baseline--weak--n2000} it is $-11.891$. Runtime also favors KAN in 26 of 27 scenarios. The single exception is \texttt{baseline--strong--n500}, where KAN is slower by 0.155 seconds on average but still has much lower integrated RMSE ($0.189$ versus $2.040$).
+The corrected performance pattern is a speed/accuracy tradeoff rather than a KAN dominance result. KAN is faster in every one of the 27 benchmark scenarios, with an average runtime advantage of 3.169 seconds. RF, however, has lower integrated RMSE in 26 of 27 scenarios and lower mean absolute error in all 27. The only KAN integrated-RMSE win is \texttt{complex\_local--strong--n2000}, where KAN has integrated RMSE 0.073 versus 0.278 for RF. Even in that cell, RF has slightly lower mean absolute error, so the result should be interpreted as an RF tail-instability diagnostic rather than broad KAN accuracy superiority.
 
 \subsection{Simulation Design 2: Targeted KAN Ablation}
 \label{subsec:sim_dgp2}
 
-To test whether the KAN gains depend on one arbitrary tuning choice, we run a restricted ablation on three representative scenarios: \texttt{baseline--weak--n2000}, \texttt{complex\_local--weak--n2000}, and \texttt{complex\_local--strong--n2000}. The ablation varies network width, spline grid size, training steps, and regularization strength. Selection is based on average integrated RMSE, with ties broken by fragile denominator share and then runtime.
+To choose a KAN policy for the corrected reruns, we run a restricted ablation on three representative scenarios: \texttt{baseline--weak--n2000}, \texttt{complex\_local--weak--n2000}, and \texttt{complex\_local--strong--n2000}. The ablation varies network width, spline grid size, training steps, and regularization strength. Selection is based on average integrated RMSE, with ties broken by fragile denominator share and then runtime.
 
 \begin{table}[htbp]
 \centering
@@ -327,17 +327,17 @@ To test whether the KAN gains depend on one arbitrary tuning choice, we run a re
 \toprule
 KAN configuration & Mean int. RMSE & Mean abs. error & Mean runtime \\
 \midrule
-\texttt{kan\_steps10\_v1} & 0.766 & 0.528 & 2.273 \\
-\texttt{kan\_width8\_v1}  & 0.773 & 0.539 & 5.097 \\
-\texttt{kan\_grid3\_v1}   & 0.774 & 0.551 & 5.138 \\
-\texttt{kan\_core\_v1}    & 0.775 & 0.547 & 5.300 \\
-\texttt{kan\_steps50\_v1} & 0.847 & 0.651 & 9.879 \\
-\texttt{kan\_width64\_v1} & 0.849 & 0.648 & 5.150 \\
+\texttt{kan\_width64\_v1} & 0.194 & 0.170 & 4.986 \\
+\texttt{kan\_steps50\_v1} & 0.198 & 0.173 & 9.245 \\
+\texttt{kan\_grid3\_v1}   & 0.251 & 0.223 & 4.905 \\
+\texttt{kan\_grid6\_v1}   & 0.254 & 0.226 & 4.955 \\
+\texttt{kan\_core\_v1}    & 0.255 & 0.226 & 5.104 \\
+\texttt{kan\_reg1e-5\_v1} & 0.255 & 0.227 & 4.744 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The main message from the ablation is not that the benchmark was mis-tuned. The differences among the top KAN specifications are small, and several KAN variants outperform the baseline \texttt{kan\_core\_v1}. The most notable result is that a shorter 10-step schedule weakly dominates the baseline KAN on both integrated RMSE and runtime. This suggests that the KAN gains in the core benchmark are not especially fragile, but also that careful simplification can improve the KAN point-estimation pipeline further.
+The ablation selects \texttt{kan\_width64\_v1}. The top two configurations are close in average integrated RMSE, but the 50-step variant is materially slower. We therefore use the width-64, 25-step KAN as the locked KAN policy for the corrected simulation matrix, empirical core rerun, and inference validation.
 
 \section{Empirical Application The Distributional Impact of 401(k) Participation on Financial Assets}
 \label{sec:empirical_app}
@@ -351,35 +351,31 @@ We use the same SIPP sample analyzed by \citet{chernozhukov2004impact} and later
 The first stage is strong in every empirical specification we ran. In the core raw specification, the sample first-stage effect is 0.705, the first-stage $F$-statistic is 12,594.96, and the corresponding partial $R^2$ is 0.560. These diagnostics make weak-instrument concerns secondary in this application. The more relevant issue is how the nuisance learner behaves when translating that strong first stage into a distributional effect curve.
 
 \subsection{Results and Comparative Discussion}
-The core empirical comparison already shows substantial divergence between RF and KAN. In the raw 30-point specification, the mean absolute gap between the two estimated curves is 0.187, the maximum pointwise gap is 0.745, and the sign-disagreement share is 0.833. In other words, the two nuisance learners often disagree not only in magnitude but in the direction of the estimated distributional effect at a given threshold $y$.
+The corrected core empirical comparison shows substantial divergence between RF and KAN. In the raw 30-point specification, the mean absolute gap between the two estimated curves is 0.624, the maximum pointwise gap is 2.989, and the sign-disagreement share is 0.767. In other words, the two nuisance learners often disagree not only in magnitude but in the direction of the estimated distributional effect at a given threshold $y$. KAN is also faster in this core empirical run, taking 71.39 seconds versus 102.23 seconds for RF.
 
 \subsection{Diagnostic Analysis and Robustness Checks}
 \label{sec:robustness_empirical}
 
-The robustness exercise confirms that the empirical disagreement is not confined to one plotting choice. Table \ref{tab:empirical_robustness} summarizes five specifications: the core raw 30-point grid, coarser and finer grids, a standardized-covariate version, and a specification that trims observations using RF-based instrument-propensity cutoffs.
+The corrected Phase 5 rerun refreshed the core empirical specification only. Earlier robustness runs used a pre-refresh numerical path and should not be quoted as final evidence. Table \ref{tab:empirical_robustness} therefore reports only the corrected core empirical divergence and records the main diagnostics needed for the next robustness-refresh step.
 
 \begin{table}[htbp]
 \centering
-\caption{Empirical RF-KAN divergence across robustness specifications.}
+\caption{Corrected empirical RF-KAN divergence in the core specification.}
 \label{tab:empirical_robustness}
-\begin{tabular}{@{}lrrr@{}}
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Specification & Mean abs. gap & Max abs. gap & Sign disagreement \\
+Specification & Mean abs. gap & Max abs. gap & Sign disagreement & KAN runtime & RF runtime \\
 \midrule
-\texttt{core\_raw\_30}     & 0.187 & 0.745 & 0.833 \\
-\texttt{grid\_20\_raw}     & 0.165 & 0.857 & 0.850 \\
-\texttt{grid\_40\_raw}     & 0.204 & 0.886 & 0.500 \\
-\texttt{standardized\_30}  & 0.288 & 0.939 & 0.933 \\
-\texttt{trim\_rf\_05\_95}  & 4.555 & 15.347 & 0.633 \\
+\texttt{core\_raw\_30} & 0.624 & 2.989 & 0.767 & 71.39 & 102.23 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Three findings stand out. First, the RF-KAN divergence is robust to changing the $y$-grid. Second, standardizing the continuous covariates does not reconcile the two procedures; if anything, the average gap becomes larger. Third, trimming does not eliminate disagreement. After trimming 757 observations based on RF propensity estimates outside $[0.05, 0.95]$, the mean absolute gap rises to 4.555 and the maximum gap to 15.347.
+Two findings stand out from the corrected core run. First, RF-KAN disagreement is large enough that model choice can change substantive conclusions along the estimated D-IV-LATE curve. Second, the empirical runtime ranking is consistent with the simulation matrix: the locked KAN policy is faster than RF in this implementation.
 
-The diagnostics also reveal why nuisance-model behavior matters. In the raw core specification, 60.7\% of KAN instrument-propensity estimates fall outside $[0.05, 0.95]$, compared with 7.6\% for RF. Standardization sharply changes that geometry for KAN, driving the same share to zero in the standardized specification, but the D-IV-LATE disagreement with RF still persists. This is not a simple first-stage weakness story: the first stage remains extremely strong throughout. Rather, it is a nuisance-geometry story in which different learners induce materially different orthogonal-score behavior even under the same identifying design.
+The diagnostics also reveal why nuisance-model behavior matters. In the corrected raw core specification, 99.9\% of KAN instrument-propensity estimates fall outside $[0.05, 0.95]$, compared with 7.6\% for RF. This is not a simple first-stage weakness story: the sample first stage is 0.705, with a first-stage $F$-statistic of 12,594.96 and partial $R^2$ of 0.560. Rather, it is a nuisance-geometry story in which different learners induce materially different orthogonal-score behavior even under the same identifying design. The grid, standardization, and trimming robustness checks should be rerun under the corrected locked policy before they are used as final manuscript evidence.
 
-The empirical application therefore strengthens, rather than weakens, the main message from the simulations. Flexible nuisance learning can change substantive conclusions in D-IV-LATE work. At the same time, the inference results in Section \ref{sec:inference} imply that these KAN-based empirical curves should currently be interpreted as point-estimate evidence rather than as validated inferential objects.
+The empirical application therefore reinforces the broader model-choice message. Flexible nuisance learning can change substantive conclusions in D-IV-LATE work. At the same time, the inference results in Section \ref{sec:inference} imply that these KAN-based empirical curves should currently be interpreted as point-estimate evidence rather than as validated inferential objects.
 
 
 \section{Caveat Emptor The Role of Nuisance Function Estimators and Model Choice}
@@ -387,22 +383,22 @@ The empirical application therefore strengthens, rather than weakens, the main m
 
 The evidence in this paper changes what the relevant warning should be. The old caution was that model choice might matter. The stronger conclusion is that different components of performance matter differently. Point estimation, empirical shape recovery, numerical stability, and interval calibration do not necessarily rank models in the same order.
 
-For point estimation, the results are clearly favorable to KANs. In the corrected 27-scenario simulation matrix, the baseline KAN beats RF on integrated RMSE in every scenario and is almost always faster. The KAN ablation suggests that these gains are not a knife-edge artifact of one arbitrary configuration. For empirical interpretation, however, the same flexibility that helps KANs in the benchmark also produces materially different D-IV-LATE curves in the 401(k) application. That makes nuisance-model choice a first-order substantive issue rather than an implementation detail.
+For point estimation, the corrected results are not uniformly favorable to KANs. In the corrected 27-scenario simulation matrix, the locked KAN policy is faster in every scenario, but RF has lower integrated RMSE in 26 scenarios and lower mean absolute error in all 27. The KAN ablation is still useful because it selects a disciplined KAN policy before the corrected reruns, but it does not overturn the RF accuracy advantage in the full matrix. For empirical interpretation, KAN and RF produce materially different D-IV-LATE curves in the 401(k) application. That makes nuisance-model choice a first-order substantive issue rather than an implementation detail.
 
 For inference, the ranking changes. KAN intervals are not calibrated well enough to support primary claims. RF asymptotic intervals are imperfect and often very wide, but they are materially better behaved in the validation study. The practical implication is that applied researchers should not treat a strong point-estimation result as evidence of inferential validity. In flexible DML pipelines, those are separate questions.
 
-The appropriate ``caveat emptor'' is therefore not anti-machine-learning. It is methodological discipline. Researchers should benchmark nuisance learners under a truth-aligned design, document how robust the empirical curve is to preprocessing and tuning choices, and validate interval procedures directly before relying on them. Under the current evidence, KANs are best viewed as promising D-IV-LATE point estimators whose inferential layer remains unresolved.
+The appropriate ``caveat emptor'' is therefore not anti-machine-learning. It is methodological discipline. Researchers should benchmark nuisance learners under a truth-aligned design, document how robust the empirical curve is to preprocessing and tuning choices, and validate interval procedures directly before relying on them. Under the current evidence, KANs are best viewed as computationally attractive D-IV-LATE nuisance learners whose accuracy and inferential behavior remain problem-dependent.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
 This paper studies model choice for D-IV-LATE through a deliberately evidence-led sequence: a corrected simulation benchmark, a targeted KAN ablation, an empirical application, and an explicit inference validation exercise. Taken together, these results support a mixed conclusion.
 
-For point estimation, KANs are genuinely promising. In the corrected benchmark they dominate RF on integrated RMSE across the full 27-scenario matrix and are almost always faster. The ablation suggests that these gains are not especially fragile and that a shorter KAN training schedule can improve further on the baseline KAN configuration. In the 401(k) application, nuisance-model choice remains substantively important, with RF and KAN producing materially different D-IV-LATE curves across several reasonable specifications.
+For point estimation, KANs are computationally promising but not accuracy-dominant in the corrected benchmark. They are faster than RF across the full 27-scenario matrix, but RF has lower integrated RMSE in 26 scenarios and lower mean absolute error in all 27. The ablation selects a width-64 KAN as the best KAN variant among the configurations tested. In the 401(k) application, nuisance-model choice remains substantively important, with RF and KAN producing materially different D-IV-LATE curves in the corrected core specification.
 
-For inference, however, the evidence is unfavorable to KANs. The validation study shows severe undercoverage for KAN-based pointwise intervals under both asymptotic and bootstrap constructions. RF asymptotic intervals are materially better calibrated, though often much wider. The strongest defensible interpretation is therefore that KANs improve D-IV-LATE point estimation but are not yet ready to serve as a default inferential layer.
+For inference, however, the evidence is unfavorable to KANs. The validation study shows severe undercoverage for KAN-based pointwise intervals under both asymptotic and bootstrap constructions. RF asymptotic intervals are materially better calibrated in the validation design. The strongest defensible interpretation is therefore that KANs can be computationally useful nuisance learners, but the current implementation is not yet ready to serve as a default point-estimation or inferential layer.
 
-That mixed verdict is, in our view, the strongest publishable result. It is methodologically informative, empirically relevant, and harder to dismiss than a blanket claim of KAN superiority. The corrected estimator now rests on a genuine reduced-form orthogonal-score derivation, but that theoretical repair also resets the empirical burden: every numerical result used in the final paper must be regenerated under the corrected code path. Future work should therefore focus not only on whether KANs can beat classical learners on point RMSE, but also on how to pair flexible nuisance learning with reliable uncertainty quantification in semiparametric distributional-IV settings.
+That mixed verdict is, in our view, the strongest publishable result. It is methodologically informative, empirically relevant, and harder to dismiss than a blanket claim of KAN superiority. The corrected estimator now rests on a genuine reduced-form orthogonal-score derivation, and the main numerical evidence has been regenerated under that corrected code path. Future work should therefore focus not only on when KANs can beat classical learners on point RMSE, but also on how to pair flexible nuisance learning with reliable uncertainty quantification in semiparametric distributional-IV settings.
 
 
 
