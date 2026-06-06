@@ -207,6 +207,10 @@ def _write_outputs(
         "scenario_count": len(profile["scenarios"]),
         "n_replications": profile["n_replications"],
         "n_bootstrap": profile["n_bootstrap"],
+        "y_points": profile["y_points"],
+        "truth_sample_size": profile["truth_sample_size"],
+        "k_folds": profile["k_folds"],
+        "kan_steps": profile["kan_steps"],
         "completed_replication_count": len(completed_keys),
         "last_selection": {
             "scenario_offset": scenario_offset,
@@ -232,6 +236,7 @@ def run_profile(
     *,
     results_dir=DEFAULT_RESULTS_DIR,
     alpha=0.05,
+    kan_steps=None,
     simulation_module=None,
     inference_module=None,
     resume=False,
@@ -242,6 +247,10 @@ def run_profile(
     inference = inference_module or load_module(INFERENCE_SCRIPT, "dlate_inference")
 
     profile = build_inference_profile(profile_name)
+    if kan_steps is not None:
+        if kan_steps <= 0:
+            raise ValueError("kan_steps must be positive when provided")
+        profile = {**profile, "kan_steps": int(kan_steps)}
     results_dir = Path(results_dir) / profile_name
     results_dir.mkdir(parents=True, exist_ok=True)
     selected_scenarios = select_scenarios(
@@ -393,6 +402,14 @@ def build_parser():
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--alpha", type=float, default=0.05)
     parser.add_argument(
+        "--kan-steps",
+        type=int,
+        help=(
+            "Override the profile KAN training steps. Use this after the KAN "
+            "ablation lock decision so inference validates the selected policy."
+        ),
+    )
+    parser.add_argument(
         "--resume",
         action="store_true",
         help="Reuse completed inference replications from an existing pointwise results file.",
@@ -408,6 +425,7 @@ def main():
         profile_name=args.profile,
         results_dir=args.results_dir,
         alpha=args.alpha,
+        kan_steps=args.kan_steps,
         resume=args.resume,
         scenario_offset=args.scenario_offset,
         scenario_count=args.scenario_count,

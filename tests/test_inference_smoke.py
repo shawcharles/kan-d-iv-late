@@ -159,6 +159,12 @@ def test_bootstrap_inference_rejects_malformed_grid_with_supplied_point_estimate
 
 
 def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path):
+    seen_kan_steps = []
+
+    def fake_estimate_nuisance_functions(*args, **kwargs):
+        seen_kan_steps.append(kwargs["kan_steps"])
+        return sample_nuisance()
+
     runner = load_module("../run_inference_validation.py", "run_inference_validation_smoke")
 
     fake_simulation = types.SimpleNamespace(
@@ -167,7 +173,7 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
             "truth_df": pd.DataFrame({"y": [0.0, 1.0], "true_dlate": [0.25, 0.75]})
         },
         generate_dlate_data=lambda **kwargs: (sample_data(), None),
-        estimate_nuisance_functions=lambda *args, **kwargs: sample_nuisance(),
+        estimate_nuisance_functions=fake_estimate_nuisance_functions,
     )
     asymptotic_point_estimates = np.array([0.2, 0.8])
 
@@ -197,6 +203,7 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
     outputs = runner.run_profile(
         profile_name="smoke",
         results_dir=tmp_path,
+        kan_steps=7,
         simulation_module=fake_simulation,
         inference_module=fake_inference,
     )
@@ -206,10 +213,12 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
     summary = pd.read_csv(outputs["summary_path"])
 
     assert manifest["profile"] == "smoke"
+    assert manifest["kan_steps"] == 7
     assert manifest["completed_replication_count"] == 2
     assert_manifest_provenance(manifest)
     assert pointwise.shape[0] == 4
     assert set(summary["model"]) == {"kan", "rf"}
+    assert seen_kan_steps == [7, 7]
 
     def fail_estimation(*args, **kwargs):
         raise AssertionError("resume should skip completed inference replications")
@@ -218,6 +227,7 @@ def test_inference_runner_smoke_writes_checkpointed_outputs_and_resumes(tmp_path
     resumed = runner.run_profile(
         profile_name="smoke",
         results_dir=tmp_path,
+        kan_steps=7,
         simulation_module=fake_simulation,
         inference_module=fake_inference,
         resume=True,
