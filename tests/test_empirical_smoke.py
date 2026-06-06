@@ -110,7 +110,13 @@ def test_empirical_runner_manifest_includes_provenance(tmp_path, monkeypatch):
             ),
             ["X"],
         ),
-        build_kan_config=lambda **kwargs: {"steps": kwargs.get("steps", 1)},
+        build_kan_config=lambda **kwargs: {
+            "steps": kwargs.get("steps", 1),
+            "hidden_dim": kwargs.get("hidden_dim", 16),
+            "grid_size": kwargs.get("grid_size", 4),
+            "reg_strength": kwargs.get("reg_strength", 1e-4),
+        },
+        build_kan_config_id=lambda config: f"kan_hd{config['hidden_dim']}_st{config['steps']}",
         build_rf_config=lambda **kwargs: {"n_estimators": kwargs.get("n_estimators", 10)},
     )
 
@@ -147,4 +153,36 @@ def test_empirical_runner_manifest_includes_provenance(tmp_path, monkeypatch):
 
     manifest_path = tmp_path / "core" / "empirical_manifest_core.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["kan_config_label"] is None
+    assert manifest["core_kan_config"]["hidden_dim"] == 16
+    assert manifest["core_kan_config_id"] == "kan_hd16_st100"
     assert_manifest_provenance(manifest)
+
+
+def test_empirical_runner_accepts_labeled_kan_config():
+    wrapper = load_module(PROJECT_DIR / "run_empirical.py", "run_empirical_labeled_config")
+    fake_module = types.SimpleNamespace(
+        build_kan_config=lambda **kwargs: {
+            "steps": kwargs.get("steps", 1),
+            "hidden_dim": kwargs.get("hidden_dim", 16),
+            "grid_size": kwargs.get("grid_size", 4),
+            "reg_strength": kwargs.get("reg_strength", 1e-4),
+        },
+        build_rf_config=lambda **kwargs: {"n_estimators": kwargs.get("n_estimators", 10)},
+    )
+
+    specs = wrapper.build_empirical_specs(
+        fake_module,
+        "core",
+        y_points=30,
+        folds=5,
+        kan_steps=100,
+        kan_config_label="kan_width64_v1",
+    )
+
+    assert specs[0]["kan_config"] == {
+        "steps": 25,
+        "hidden_dim": 64,
+        "grid_size": 4,
+        "reg_strength": 1e-4,
+    }

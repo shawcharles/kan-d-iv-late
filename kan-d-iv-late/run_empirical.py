@@ -21,6 +21,14 @@ if str(CODE_DIR) not in sys.path:
 from provenance import collect_run_provenance
 
 
+KAN_CONFIG_LABELS = ("kan_width64_v1",)
+
+
+def build_labeled_kan_config(module, label):
+    if label == "kan_width64_v1":
+        return module.build_kan_config(steps=25, hidden_dim=64, grid_size=4, reg_strength=1e-4)
+    raise ValueError(f"Unsupported KAN config label: {label}")
+
 
 def load_module():
     if str(CODE_DIR) not in sys.path:
@@ -33,8 +41,11 @@ def load_module():
     return module
 
 
-def build_empirical_specs(module, profile_name, *, y_points, folds, kan_steps):
-    core_kan_config = module.build_kan_config(steps=kan_steps)
+def build_empirical_specs(module, profile_name, *, y_points, folds, kan_steps, kan_config_label=None):
+    if kan_config_label is None:
+        core_kan_config = module.build_kan_config(steps=kan_steps)
+    else:
+        core_kan_config = build_labeled_kan_config(module, kan_config_label)
     core_rf_config = module.build_rf_config()
 
     specs = [
@@ -365,6 +376,7 @@ def build_parser():
     parser.add_argument("--y-points", type=int, default=30)
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--kan-steps", type=int, default=100)
+    parser.add_argument("--kan-config-label", choices=KAN_CONFIG_LABELS)
     return parser
 
 
@@ -385,6 +397,7 @@ def main():
         y_points=args.y_points,
         folds=args.folds,
         kan_steps=args.kan_steps,
+        kan_config_label=args.kan_config_label,
     )
 
     curve_frames = []
@@ -417,6 +430,9 @@ def main():
     manifest = {
         "profile": args.profile,
         "data_path": str(args.data),
+        "kan_config_label": args.kan_config_label,
+        "core_kan_config": specs[0]["kan_config"],
+        "core_kan_config_id": module.build_kan_config_id(specs[0]["kan_config"]),
         "spec_labels": [spec["label"] for spec in specs],
         "output_files": {
             "empirical_curves": str(curves_path),
