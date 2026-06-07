@@ -5,6 +5,8 @@ Research code and manuscript materials for the paper
 
 ## Current Status
 
+Status: submitted to Journal of Statistical Computation and Simulation.
+
 This repository has been rationalised into one reviewer-usable path.
 
 - The importable package is [`src/kan_d_iv_late/`](./src/kan_d_iv_late).
