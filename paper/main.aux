@@ -31,95 +31,96 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Assumptions and Parameter of Interest}{4}{}\protected@file@percent }
 \newlabel{ass:independence}{{3.1}{4}}
 \newlabel{ass:independence@cref}{{[assumption][1][3]3.1}{[1][4][]4}}
-\newlabel{ass:relevance}{{3.2}{4}}
-\newlabel{ass:relevance@cref}{{[assumption][2][3]3.2}{[1][4][]4}}
-\newlabel{ass:monotonicity}{{3.3}{4}}
-\newlabel{ass:monotonicity@cref}{{[assumption][3][3]3.3}{[1][4][]4}}
+\newlabel{ass:instrument_overlap}{{3.2}{4}}
+\newlabel{ass:instrument_overlap@cref}{{[assumption][2][3]3.2}{[1][4][]4}}
+\newlabel{ass:relevance}{{3.3}{4}}
+\newlabel{ass:relevance@cref}{{[assumption][3][3]3.3}{[1][4][]4}}
+\newlabel{ass:monotonicity}{{3.4}{4}}
+\newlabel{ass:monotonicity@cref}{{[assumption][4][3]3.4}{[1][4][]4}}
 \newlabel{eq:dlate_def}{{1}{4}}
 \newlabel{eq:dlate_def@cref}{{[equation][1][]1}{[1][4][]4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Identification}{4}{}\protected@file@percent }
-\citation{chernozhukov2018debiased}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Identification}{5}{}\protected@file@percent }
 \newlabel{eq:dlate_identification}{{2}{5}}
-\newlabel{eq:dlate_identification@cref}{{[equation][2][]2}{[1][4][]5}}
+\newlabel{eq:dlate_identification@cref}{{[equation][2][]2}{[1][5][]5}}
 \newlabel{eq:dlate_identification_cov_merged}{{3}{5}}
 \newlabel{eq:dlate_identification_cov_merged@cref}{{[equation][3][]3}{[1][5][]5}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Estimation Strategy}{5}{}\protected@file@percent }
-\newlabel{sec:estimation}{{4}{5}}
-\newlabel{sec:estimation@cref}{{[section][4][]4}{[1][5][]5}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Reduced-Form Nuisance Functions}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Machine Learning Models for Nuisance Functions}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Standard Machine Learning Models (e.g., Random Forests)}{5}{}\protected@file@percent }
 \citation{liu2024kan}
-\citation{kratsios2025kolmogorov}
-\citation{liu2024kan}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}Kolmogorov-Arnold Networks (KANs) as Candidate Nuisance Learners}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Estimation Strategy}{6}{}\protected@file@percent }
+\newlabel{sec:estimation}{{4}{6}}
+\newlabel{sec:estimation@cref}{{[section][4][]4}{[1][5][]6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Reduced-Form Nuisance Functions}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Machine Learning Models for Nuisance Functions}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}Benchmark Learner: Random Forests}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}Candidate Learner: Kolmogorov-Arnold Networks}{6}{}\protected@file@percent }
 \newlabel{subsubsec:case_for_kans}{{4.2.2}{6}}
 \newlabel{subsubsec:case_for_kans@cref}{{[subsubsection][2][4,2]4.2.2}{[1][6][]6}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.3}Nuisance Function Estimation with KANs: Implementation Details}{6}{}\protected@file@percent }
-\newlabel{subsubsec:kans_implementation}{{4.2.3}{6}}
-\newlabel{subsubsec:kans_implementation@cref}{{[subsubsection][3][4,2]4.2.3}{[1][6][]6}}
+\citation{kratsios2025kolmogorov}
+\citation{liu2024kan}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.3}Nuisance Function Estimation with KANs: Implementation Details}{7}{}\protected@file@percent }
+\newlabel{subsubsec:kans_implementation}{{4.2.3}{7}}
+\newlabel{subsubsec:kans_implementation@cref}{{[subsubsection][3][4,2]4.2.3}{[1][7][]7}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Orthogonal Level Scores for D-IV-LATE}{7}{}\protected@file@percent }
-\newlabel{eq:psi_beta}{{4}{7}}
-\newlabel{eq:psi_beta@cref}{{[equation][4][]4}{[1][7][]7}}
-\newlabel{eq:psi_alpha}{{5}{7}}
-\newlabel{eq:psi_alpha@cref}{{[equation][5][]5}{[1][7][]7}}
-\newlabel{eq:moment_condition_ratio}{{6}{7}}
-\newlabel{eq:moment_condition_ratio@cref}{{[equation][6][]6}{[1][7][]7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Algorithm: Cross-Fitting}{7}{}\protected@file@percent }
-\newlabel{subsec:cross_fitting_alg}{{4.4}{7}}
-\newlabel{subsec:cross_fitting_alg@cref}{{[subsection][4][4]4.4}{[1][7][]7}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Asymptotic Theory for the Corrected Estimator}{8}{}\protected@file@percent }
-\newlabel{sec:asymptotics}{{5}{8}}
-\newlabel{sec:asymptotics@cref}{{[section][5][]5}{[1][8][]8}}
-\newlabel{ass:score_overlap}{{5.1}{8}}
-\newlabel{ass:score_overlap@cref}{{[assumption][1][5]5.1}{[1][8][]8}}
-\newlabel{ass:score_rates}{{5.2}{8}}
-\newlabel{ass:score_rates@cref}{{[assumption][2][5]5.2}{[1][8][]8}}
-\newlabel{thm:pointwise_asymptotics}{{5.1}{8}}
-\newlabel{thm:pointwise_asymptotics@cref}{{[theorem][1][5]5.1}{[1][8][]8}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Statistical Inference and Uncertainty Quantification}{9}{}\protected@file@percent }
-\newlabel{sec:inference}{{6}{9}}
-\newlabel{sec:inference@cref}{{[section][6][]6}{[1][9][]9}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Inference-validation summary across three representative scenarios. Coverage is averaged across the evaluation grid; the nominal target is 0.95. Each model-scenario pair uses eight Monte Carlo replications and 64 pointwise coverage cells.}}{10}{}\protected@file@percent }
-\newlabel{tab:inference_summary}{{1}{10}}
-\newlabel{tab:inference_summary@cref}{{[table][1][]1}{[1][9][]10}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Simulation Study}{10}{}\protected@file@percent }
-\newlabel{sec:simulations}{{7}{10}}
-\newlabel{sec:simulations@cref}{{[section][7][]7}{[1][9][]10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Simulation Design 1: Full Benchmark Matrix}{10}{}\protected@file@percent }
-\newlabel{subsec:sim_dgp1}{{7.1}{10}}
-\newlabel{subsec:sim_dgp1@cref}{{[subsection][1][7]7.1}{[1][10][]10}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Full corrected simulation benchmark summary under the locked \texttt  {kan\_width64\_v1} policy. Reported deltas are KAN minus RF.}}{10}{}\protected@file@percent }
-\newlabel{tab:sim_results_summary_dgp1}{{2}{10}}
-\newlabel{tab:sim_results_summary_dgp1@cref}{{[table][2][]2}{[1][10][]10}}
+\newlabel{eq:psi_beta}{{4}{8}}
+\newlabel{eq:psi_beta@cref}{{[equation][4][]4}{[1][7][]8}}
+\newlabel{eq:psi_alpha}{{5}{8}}
+\newlabel{eq:psi_alpha@cref}{{[equation][5][]5}{[1][8][]8}}
+\newlabel{eq:moment_condition_ratio}{{6}{8}}
+\newlabel{eq:moment_condition_ratio@cref}{{[equation][6][]6}{[1][8][]8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Algorithm: Cross-Fitting}{8}{}\protected@file@percent }
+\newlabel{subsec:cross_fitting_alg}{{4.4}{8}}
+\newlabel{subsec:cross_fitting_alg@cref}{{[subsection][4][4]4.4}{[1][8][]8}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Asymptotic Theory for the Corrected Estimator}{9}{}\protected@file@percent }
+\newlabel{sec:asymptotics}{{5}{9}}
+\newlabel{sec:asymptotics@cref}{{[section][5][]5}{[1][9][]9}}
+\newlabel{ass:score_overlap}{{5.1}{9}}
+\newlabel{ass:score_overlap@cref}{{[assumption][1][5]5.1}{[1][9][]9}}
+\newlabel{ass:score_rates}{{5.2}{9}}
+\newlabel{ass:score_rates@cref}{{[assumption][2][5]5.2}{[1][9][]9}}
+\newlabel{thm:pointwise_asymptotics}{{5.1}{10}}
+\newlabel{thm:pointwise_asymptotics@cref}{{[theorem][1][5]5.1}{[1][10][]10}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Statistical Inference and Uncertainty Quantification}{10}{}\protected@file@percent }
+\newlabel{sec:inference}{{6}{10}}
+\newlabel{sec:inference@cref}{{[section][6][]6}{[1][10][]10}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Inference-validation summary across three representative scenarios. Coverage is averaged across the evaluation grid; the nominal target is 0.95. Each model-scenario pair uses eight Monte Carlo replications and 64 pointwise coverage cells.}}{11}{}\protected@file@percent }
+\newlabel{tab:inference_summary}{{1}{11}}
+\newlabel{tab:inference_summary@cref}{{[table][1][]1}{[1][11][]11}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Simulation Study}{11}{}\protected@file@percent }
+\newlabel{sec:simulations}{{7}{11}}
+\newlabel{sec:simulations@cref}{{[section][7][]7}{[1][11][]11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Simulation Design 1: Full Benchmark Matrix}{11}{}\protected@file@percent }
+\newlabel{subsec:sim_dgp1}{{7.1}{11}}
+\newlabel{subsec:sim_dgp1@cref}{{[subsection][1][7]7.1}{[1][11][]11}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Full corrected simulation benchmark summary under the locked \texttt  {kan\_width64\_v1} policy. Reported deltas are KAN minus RF; positive error deltas favor RF, and negative runtime deltas favor KAN.}}{12}{}\protected@file@percent }
+\newlabel{tab:sim_results_summary_dgp1}{{2}{12}}
+\newlabel{tab:sim_results_summary_dgp1@cref}{{[table][2][]2}{[1][12][]12}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Corrected simulation benchmark by design family. Reported deltas are KAN minus RF.}}{12}{}\protected@file@percent }
+\newlabel{tab:sim_panel_summary}{{3}{12}}
+\newlabel{tab:sim_panel_summary@cref}{{[table][3][]3}{[1][12][]12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Simulation Design 2: Targeted KAN Ablation}{12}{}\protected@file@percent }
+\newlabel{subsec:sim_dgp2}{{7.2}{12}}
+\newlabel{subsec:sim_dgp2@cref}{{[subsection][2][7]7.2}{[1][12][]12}}
 \citation{chernozhukov2004impact}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Corrected simulation benchmark by design family. Reported deltas are KAN minus RF.}}{11}{}\protected@file@percent }
-\newlabel{tab:sim_panel_summary}{{3}{11}}
-\newlabel{tab:sim_panel_summary@cref}{{[table][3][]3}{[1][11][]11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Simulation Design 2: Targeted KAN Ablation}{11}{}\protected@file@percent }
-\newlabel{subsec:sim_dgp2}{{7.2}{11}}
-\newlabel{subsec:sim_dgp2@cref}{{[subsection][2][7]7.2}{[1][11][]11}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Targeted KAN ablation across three representative scenarios. Lower is better for RMSE and runtime.}}{11}{}\protected@file@percent }
-\newlabel{tab:sim_results_summary_dgp2}{{4}{11}}
-\newlabel{tab:sim_results_summary_dgp2@cref}{{[table][4][]4}{[1][11][]11}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Empirical Application: The Distributional Impact of 401(k) Participation on Financial Assets}{11}{}\protected@file@percent }
-\newlabel{sec:empirical_app}{{8}{11}}
-\newlabel{sec:empirical_app@cref}{{[section][8][]8}{[1][11][]11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Context and Data}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Instrument and First Stage}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Results and Comparative Discussion}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Diagnostic Analysis}{12}{}\protected@file@percent }
-\newlabel{sec:robustness_empirical}{{8.4}{12}}
-\newlabel{sec:robustness_empirical@cref}{{[subsection][4][8]8.4}{[1][12][]12}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Corrected empirical RF-KAN divergence and propensity diagnostics in the core specification.}}{12}{}\protected@file@percent }
-\newlabel{tab:empirical_core_diagnostics}{{5}{12}}
-\newlabel{tab:empirical_core_diagnostics@cref}{{[table][5][]5}{[1][12][]12}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Caveat Emptor: The Role of Nuisance Function Estimators and Model Choice}{13}{}\protected@file@percent }
-\newlabel{sec:caveat_emptor}{{9}{13}}
-\newlabel{sec:caveat_emptor@cref}{{[section][9][]9}{[1][12][]13}}
-\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{13}{}\protected@file@percent }
-\newlabel{sec:conclusion}{{10}{13}}
-\newlabel{sec:conclusion@cref}{{[section][10][]10}{[1][13][]13}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Targeted KAN ablation across three representative scenarios. Lower is better for RMSE, mean absolute error, fragile denominator share, and runtime.}}{13}{}\protected@file@percent }
+\newlabel{tab:sim_results_summary_dgp2}{{4}{13}}
+\newlabel{tab:sim_results_summary_dgp2@cref}{{[table][4][]4}{[1][13][]13}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Empirical Application: The Distributional Impact of 401(k) Participation on Financial Assets}{13}{}\protected@file@percent }
+\newlabel{sec:empirical_app}{{8}{13}}
+\newlabel{sec:empirical_app@cref}{{[section][8][]8}{[1][13][]13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Context and Data}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Instrument and First Stage}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Results and Comparative Discussion}{14}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Diagnostic Analysis}{14}{}\protected@file@percent }
+\newlabel{sec:robustness_empirical}{{8.4}{14}}
+\newlabel{sec:robustness_empirical@cref}{{[subsection][4][8]8.4}{[1][14][]14}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Corrected empirical RF-KAN divergence and instrument-propensity diagnostics in the core specification. Mean gap and max gap are absolute RF-KAN differences over the D-IV-LATE grid. Sign disagreement is the share of grid points with opposite signs. KAN outside and RF outside report the share of observations with estimated instrument propensity outside $[0.05,0.95]$.}}{14}{}\protected@file@percent }
+\newlabel{tab:empirical_core_diagnostics}{{5}{14}}
+\newlabel{tab:empirical_core_diagnostics@cref}{{[table][5][]5}{[1][14][]14}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Model Risk and Nuisance-Learner Choice}{15}{}\protected@file@percent }
+\newlabel{sec:model_risk_choice}{{9}{15}}
+\newlabel{sec:model_risk_choice@cref}{{[section][9][]9}{[1][14][]15}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Conclusion}{15}{}\protected@file@percent }
+\newlabel{sec:conclusion}{{10}{15}}
+\newlabel{sec:conclusion@cref}{{[section][10][]10}{[1][15][]15}}
 \bibcite{abadie2002bootstrap}{{1}{2002}{{Abadie}}{{}}}
 \bibcite{angrist1996identification}{{2}{1996}{{Angrist et al.}}{{}}}
 \bibcite{bickel1993efficient}{{3}{1993}{{Bickel et al.}}{{}}}
@@ -129,6 +130,10 @@
 \bibcite{chernozhukov2013inference}{{7}{2013}{{Chernozhukov et al.}}{{}}}
 \bibcite{chernozhukov2018debiased}{{8}{2018}{{Chernozhukov et al.}}{{}}}
 \bibcite{doksum1974empirical}{{9}{1974}{{Doksum}}{{}}}
+\@writefile{toc}{\let\numberline\tmptocnumberline}
+\@writefile{toc}{\contentsline {section}{\numberline {Appendix \nobreakspace  {}A}Replication Materials}{16}{}\protected@file@percent }
+\newlabel{app:replication_materials}{{Appendix \nobreakspace  {}A}{16}}
+\newlabel{app:replication_materials@cref}{{[appendix][1][2147483647]Appendix \nobreakspace  {}A}{[1][16][]16}}
 \bibcite{firpo2007efficient}{{10}{2007}{{Firpo}}{{}}}
 \bibcite{hoagland2020who}{{11}{2020}{{Hoagland}}{{}}}
 \bibcite{imbens1994}{{12}{1994}{{Imbens \& Angrist}}{{}}}
@@ -139,4 +144,4 @@
 \bibcite{liu2024kan}{{17}{2024}{{Liu et al.}}{{}}}
 \bibcite{mehendale2025kanite}{{18}{2025}{{Mehendale et al.}}{{}}}
 \bibcite{newey1994asymptotic}{{19}{1994}{{Newey}}{{}}}
-\gdef \@abspage@last{14}
+\gdef \@abspage@last{17}
