@@ -7,15 +7,15 @@
 \date{this version \today}
 
   \begin{abstract}
-We study model risk in machine-learning estimation of the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE). D-IV-LATE is an existing distributional-IV estimand for compliers; our contribution is to study what happens when it is estimated with flexible nuisance learners inside a double/debiased machine learning framework. We provide a reduced-form orthogonal level-score implementation for the covariate-adjusted D-IV-LATE target and use it to answer a practical question: how much does the nuisance learner matter for distributional IV conclusions?
+We study model risk in machine-learning estimation of the Distributional Instrumental Variable Local Average Treatment Effect (D-IV-LATE), the distributional IV effect for the subpopulation induced into treatment by the instrument. The contribution is not a new neural causal estimand. We implement a reduced-form orthogonal level-score DML estimator for the covariate-adjusted D-IV-LATE target and use it to ask how much the nuisance learner matters for distributional IV conclusions.
 
-The answer is that nuisance choice can change runtime, point estimates, and inference in different directions. In a simulation benchmark with explicit monotone principal strata and known complier truth, Kolmogorov-Arnold Networks (KANs) are faster than Random Forests in every scenario examined, but Random Forests usually produce more accurate D-IV-LATE curves. A targeted KAN ablation selects a width-64 KAN as the best KAN variant among those tested, but the result is a speed/accuracy tradeoff rather than evidence of KAN accuracy dominance.
+In simulations with explicit monotone principal strata and known complier truth, Kolmogorov-Arnold Networks (KANs) are faster than Random Forests in every scenario examined, but Random Forests usually produce more accurate D-IV-LATE curves. A targeted KAN ablation selects a width-64 KAN as the best KAN variant among those tested, but this is a speed/accuracy tradeoff rather than evidence of KAN dominance.
 
-The 401(k) application shows why this model risk matters in practice. RF and KAN estimates differ materially in the core specification, with frequent sign reversals along the estimated D-IV-LATE curve. But the empirical KAN propensity estimates concentrate near the boundaries, so the KAN curve is best interpreted as sensitivity evidence rather than as a validated standalone causal estimate. In a separate inference-validation exercise, KAN-based pointwise intervals undercover badly under both asymptotic and bootstrap constructions, while RF asymptotic intervals are better calibrated in the validation design. The paper's main lesson is therefore cautionary and constructive: speed and architectural flexibility are not enough for causal inference. Applied researchers using ML-based distributional IV estimators would be advised to benchmark nuisance learners, report overlap and calibration diagnostics, and validate inference directly.
-
-\vspace{10pt}
-Keywords D-IV-LATE, Instrumental Variables, Double Machine Learning, Kolmogorov-Arnold Networks, Random Forests, Model Choice
+In a 401(k) application, RF and KAN estimates differ materially, with frequent sign reversals along the estimated curve. The KAN instrument-propensity estimates also concentrate near the boundaries, so the KAN empirical curve is best read as sensitivity evidence. In inference validation, KAN pointwise intervals undercover badly under both asymptotic and bootstrap constructions, while RF asymptotic intervals are better calibrated in the validation designs. The main lesson is cautionary and constructive: speed and architectural flexibility are not enough for causal inference. Applied researchers using ML-based distributional IV estimators would be advised to benchmark nuisance learners, report overlap and calibration diagnostics, and validate inference directly.
 \end{abstract}
+\begin{keyword}
+D-IV-LATE \sep Instrumental Variables \sep Double Machine Learning \sep Kolmogorov-Arnold Networks \sep Random Forests \sep Model Choice
+\end{keyword}
 \end{frontmatter}
 
 \section{Introduction}
